@@ -15,6 +15,7 @@ static bool between(seq_nr a, seq_nr b, seq_nr c){
     else
         return(false);
 }
+
 static void send_data(seq_nr frame_nr, seq_nr frame_expected, packet buffer[], int sock){
     /* Construct and send a data frame. */
     frame s; /* scratch variable */
@@ -133,7 +134,11 @@ void wait_for_event(event_type *event){
 }
 
 /* Fetch a packet from the network layer for transmission on the channel */
-void from_network_layer(packet *p){}
+void from_network_layer(packet *p){
+    char temp[PACKET_SIZE];
+    int bytesRec=(int)read(toDL[1],temp,PACKET_SIZE);
+    strncpy(p->data,temp,bytesRec);
+}
 /* Deliver information from an inbound frame to the network layer. */
 
 void to_network_layer(char *f){}
@@ -182,6 +187,54 @@ void enable_network_layer(void){}
 
 /* Forbid the network layer from causing a network layer ready event. */
 void disable_network_layer(void){}
+
+/* Applies byte stuffing on *input* and puts the result in *output*. The
+ function also returns the size of *output*, i.e. the stuffed buffer. */
+int byteStuff(char *input, char *output){
+     int ind = 0; //keeps track of the next position in output.
+     
+     for(int i = 0; i <= strlen(input); i++){
+         if(input[i] == '\x10'){ //if the input is DLE
+             output[ind++] = input[i];
+             output[ind++] = input[i];
+         }
+         else
+             output[ind++] = input[i];
+     }
+     
+     return ind - 1; //size
+ }
+
+/* Puts two checksum bytes for *input* in *result*. *size* is the size of
+ *input*. The function returns 1 on success. If the size of input is less
+ than 2, the checksum cannot be computed; thus, the function returns -1.
+ */
+int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH+1]){
+    if(size < 2)
+        return -1;
+    
+    result[0] = input[0];
+    result[1] = input[1];
+    
+    for(int i = 2; i < size; i++){
+        result[i%2] ^= input[i];
+    }
+    result[2]='\0';
+    
+    return 1;
+}
+
+int splitFrame(char *stuffedPacket, char rawFrames[MAX_FRAME_SPLIT][PAYLOAD_SIZE])
+{
+    int len = (int)strlen(stuffedPacket);
+    int i=0;
+    for(i=0;i<ceil(((float)len/PAYLOAD_SIZE));i++){
+        int offset=min(PAYLOAD_SIZE,(int)strlen(stuffedPacket+i*PAYLOAD_SIZE));
+        strncpy(rawFrames[i],stuffedPacket+(i*PAYLOAD_SIZE),offset);
+    }
+    return i;
+}
+
 
 
 

@@ -46,8 +46,24 @@ int main(int argc, char **argv){
 		}
         
         int pid;
+        
+
+        
         if((pid=fork())==0){//child process
-            //execvp
+            // Two sets of pipes:
+            // first pipe allows out ouput (on the FD created by pipe) to be DL layer's input
+            // second pipe allows our input to be DL layer's output
+            pipe(toDL);
+            pipe(fromDL);
+            
+            //fork datalink()
+            // if child(){
+                //close(toDL[0]);
+                //close(fromDL[1]);
+            //else if parent()
+                //close(toDL[1]);
+                //close(fromDL[0]);
+            
             cout << "calling in child\n";
             close(sock);
             exit(processClient(client_sock));
@@ -178,7 +194,7 @@ void receiveCommand(string & line, int sock){
     msg.data[bytesRec]='\0';
     
 #ifdef DEBUG
-    cout <<"Received="<< msg<< " rec bytes=" << bytesRec << endl;
+    cout <<"Received="<< msg.data<< " rec bytes=" << bytesRec << endl;
 #endif
     if((int)bytesRec < 0){
         perror("Receive from client");
@@ -227,6 +243,6 @@ int serverSetup(){
 	}
     
     return sock;
-}
 
+}
 

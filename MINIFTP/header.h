@@ -13,12 +13,15 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <vector>
+#include <math.h>
 using namespace std;
 
 const string PORT="7766"; // unused port
 const char DELIM=' ';
 const char START_DELIM='S';
 const char END_DELIM='E';
+int toDL[2];
+int fromDL[2];
 
 //const char DELIM=0x10;
 #define BUFFER_SIZE 100

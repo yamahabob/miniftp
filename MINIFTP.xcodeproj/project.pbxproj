@@ -7,31 +7,58 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F06EC866170B224C00CDE0A9 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC865170B224C00CDE0A9 /* main.cpp */; };
-		F06EC868170B224C00CDE0A9 /* MINIFTP.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = F06EC867170B224C00CDE0A9 /* MINIFTP.1 */; };
+		F06EC895170B235500CDE0A9 /* client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC86E170B229800CDE0A9 /* client.cpp */; };
+		F06EC896170B239800CDE0A9 /* server.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC873170B229800CDE0A9 /* server.cpp */; };
+		F06EC897170B239B00CDE0A9 /* data_link.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC870170B229800CDE0A9 /* data_link.cpp */; };
+		F06EC898170B239C00CDE0A9 /* data_link.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC870170B229800CDE0A9 /* data_link.cpp */; };
+		F06EC899170B23A000CDE0A9 /* utilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC875170B229800CDE0A9 /* utilities.cpp */; };
+		F06EC89A170B23A100CDE0A9 /* utilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC875170B229800CDE0A9 /* utilities.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		F06EC860170B224C00CDE0A9 /* CopyFiles */ = {
+		F06EC87D170B22E200CDE0A9 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
 			dstSubfolderSpec = 0;
 			files = (
-				F06EC868170B224C00CDE0A9 /* MINIFTP.1 in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		F06EC88A170B22ED00CDE0A9 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		F06EC862170B224C00CDE0A9 /* MINIFTP */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MINIFTP; sourceTree = BUILT_PRODUCTS_DIR; };
-		F06EC865170B224C00CDE0A9 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		F06EC867170B224C00CDE0A9 /* MINIFTP.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = MINIFTP.1; sourceTree = "<group>"; };
+		F06EC86E170B229800CDE0A9 /* client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = client.cpp; sourceTree = "<group>"; };
+		F06EC86F170B229800CDE0A9 /* client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = client.h; sourceTree = "<group>"; };
+		F06EC870170B229800CDE0A9 /* data_link.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = data_link.cpp; sourceTree = "<group>"; };
+		F06EC871170B229800CDE0A9 /* data_link.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = data_link.h; sourceTree = "<group>"; };
+		F06EC872170B229800CDE0A9 /* header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = header.h; sourceTree = "<group>"; };
+		F06EC873170B229800CDE0A9 /* server.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = server.cpp; sourceTree = "<group>"; };
+		F06EC874170B229800CDE0A9 /* server.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = server.h; sourceTree = "<group>"; };
+		F06EC875170B229800CDE0A9 /* utilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utilities.cpp; sourceTree = "<group>"; };
+		F06EC876170B229800CDE0A9 /* utilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = utilities.h; sourceTree = "<group>"; };
+		F06EC87F170B22E200CDE0A9 /* server */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = server; sourceTree = BUILT_PRODUCTS_DIR; };
+		F06EC88C170B22ED00CDE0A9 /* client */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = client; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		F06EC85F170B224C00CDE0A9 /* Frameworks */ = {
+		F06EC87C170B22E200CDE0A9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F06EC889170B22ED00CDE0A9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -52,7 +79,8 @@
 		F06EC863170B224C00CDE0A9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F06EC862170B224C00CDE0A9 /* MINIFTP */,
+				F06EC87F170B22E200CDE0A9 /* server */,
+				F06EC88C170B22ED00CDE0A9 /* client */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -60,8 +88,15 @@
 		F06EC864170B224C00CDE0A9 /* MINIFTP */ = {
 			isa = PBXGroup;
 			children = (
-				F06EC865170B224C00CDE0A9 /* main.cpp */,
-				F06EC867170B224C00CDE0A9 /* MINIFTP.1 */,
+				F06EC86E170B229800CDE0A9 /* client.cpp */,
+				F06EC86F170B229800CDE0A9 /* client.h */,
+				F06EC870170B229800CDE0A9 /* data_link.cpp */,
+				F06EC871170B229800CDE0A9 /* data_link.h */,
+				F06EC872170B229800CDE0A9 /* header.h */,
+				F06EC873170B229800CDE0A9 /* server.cpp */,
+				F06EC874170B229800CDE0A9 /* server.h */,
+				F06EC875170B229800CDE0A9 /* utilities.cpp */,
+				F06EC876170B229800CDE0A9 /* utilities.h */,
 			);
 			path = MINIFTP;
 			sourceTree = "<group>";
@@ -69,21 +104,38 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		F06EC861170B224C00CDE0A9 /* MINIFTP */ = {
+		F06EC87E170B22E200CDE0A9 /* server */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = F06EC86B170B224C00CDE0A9 /* Build configuration list for PBXNativeTarget "MINIFTP" */;
+			buildConfigurationList = F06EC885170B22E200CDE0A9 /* Build configuration list for PBXNativeTarget "server" */;
 			buildPhases = (
-				F06EC85E170B224C00CDE0A9 /* Sources */,
-				F06EC85F170B224C00CDE0A9 /* Frameworks */,
-				F06EC860170B224C00CDE0A9 /* CopyFiles */,
+				F06EC87B170B22E200CDE0A9 /* Sources */,
+				F06EC87C170B22E200CDE0A9 /* Frameworks */,
+				F06EC87D170B22E200CDE0A9 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = MINIFTP;
-			productName = MINIFTP;
-			productReference = F06EC862170B224C00CDE0A9 /* MINIFTP */;
+			name = server;
+			productName = server;
+			productReference = F06EC87F170B22E200CDE0A9 /* server */;
+			productType = "com.apple.product-type.tool";
+		};
+		F06EC88B170B22ED00CDE0A9 /* client */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F06EC892170B22ED00CDE0A9 /* Build configuration list for PBXNativeTarget "client" */;
+			buildPhases = (
+				F06EC888170B22ED00CDE0A9 /* Sources */,
+				F06EC889170B22ED00CDE0A9 /* Frameworks */,
+				F06EC88A170B22ED00CDE0A9 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = client;
+			productName = client;
+			productReference = F06EC88C170B22ED00CDE0A9 /* client */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -107,17 +159,30 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F06EC861170B224C00CDE0A9 /* MINIFTP */,
+				F06EC87E170B22E200CDE0A9 /* server */,
+				F06EC88B170B22ED00CDE0A9 /* client */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
-		F06EC85E170B224C00CDE0A9 /* Sources */ = {
+		F06EC87B170B22E200CDE0A9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F06EC866170B224C00CDE0A9 /* main.cpp in Sources */,
+				F06EC896170B239800CDE0A9 /* server.cpp in Sources */,
+				F06EC898170B239C00CDE0A9 /* data_link.cpp in Sources */,
+				F06EC89A170B23A100CDE0A9 /* utilities.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F06EC888170B22ED00CDE0A9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F06EC895170B235500CDE0A9 /* client.cpp in Sources */,
+				F06EC897170B239B00CDE0A9 /* data_link.cpp in Sources */,
+				F06EC899170B23A000CDE0A9 /* utilities.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,14 +248,28 @@
 			};
 			name = Release;
 		};
-		F06EC86C170B224C00CDE0A9 /* Debug */ = {
+		F06EC886170B22E200CDE0A9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
 		};
-		F06EC86D170B224C00CDE0A9 /* Release */ = {
+		F06EC887170B22E200CDE0A9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		F06EC893170B22ED00CDE0A9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		F06EC894170B22ED00CDE0A9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -209,11 +288,19 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F06EC86B170B224C00CDE0A9 /* Build configuration list for PBXNativeTarget "MINIFTP" */ = {
+		F06EC885170B22E200CDE0A9 /* Build configuration list for PBXNativeTarget "server" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				F06EC86C170B224C00CDE0A9 /* Debug */,
-				F06EC86D170B224C00CDE0A9 /* Release */,
+				F06EC886170B22E200CDE0A9 /* Debug */,
+				F06EC887170B22E200CDE0A9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		F06EC892170B22ED00CDE0A9 /* Build configuration list for PBXNativeTarget "client" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F06EC893170B22ED00CDE0A9 /* Debug */,
+				F06EC894170B22ED00CDE0A9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 		};

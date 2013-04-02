@@ -10,10 +10,13 @@
 
 typedef enum{frame_arrival, cksum_err, timeout, network_layer_ready} event_type;
 
+#define CHECK_SUM_LENGTH 2
+#define MAX_FRAME_SPLIT 4
+
 
 /* From protocol.h */
 typedef unsigned int seq_nr;
-typedef enum{data,ack,nak} frame_kind;
+typedef enum{data,ack} frame_kind;
 
 typedef struct{
     frame_kind kind;
@@ -54,5 +57,8 @@ void disable_network_layer(void);
 
 void protocol5(int fd, int sock);
 static bool between(seq_nr a, seq_nr b, seq_nr c);
+int byteStuff(char *input, char *output);
+int checksum(const char* input, int size, char result[3]);
+int makeFrame(packet packetData, frame framesArr[MAX_FRAME_SPLIT]);
 
 #endif 
