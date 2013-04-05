@@ -7,6 +7,7 @@
 //
 
 #include "header.h"
+#include "utilities.h"
 
 //Parses the input message and breaks it down into its corresponding
 //command and arguments. It returns the number of arguments.
@@ -125,33 +126,49 @@ int receiveData(vector<string> arguments, int sock){
 }
 
 // Sends a string to server - separated by DLE byte
-void sendMessage(int cmd, vector<string> parameters, int sock){
-    string msg_buffer=to_string(cmd);
+void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL){
+    string msg_buffer= START_DELIM + to_string(cmd);
     for(int i=0;i<parameters.size();i++){
         msg_buffer+= DELIM + parameters[i] + DELIM;
     }
     cout << "msg_buffer=" <<msg_buffer << endl;
     
-//    while(not end of packet){
-//      while(networkEnabled==1){ // wait for signal from pipe
-//          to_data_link();
-//      }
-//    }
+    msg_buffer += END_DELIM;
     
-    ssize_t bytesSent=send(sock,msg_buffer.c_str(),msg_buffer.length(),0);
-    if(bytesSent<msg_buffer.length()){
-        perror("Failed to send complete message\n");
-        exit(1);
+    unsigned long i = 0;
+    
+    //Break the message into packets and send each packet individually to the
+    //data-link process.
+    while(i < msg_buffer.length()){
+        unsigned long len = msg_buffer.length() - i > PACKET_SIZE ?
+                    msg_buffer.length() - i :
+                    PACKET_SIZE;
+        string data = msg_buffer.substr(i, len);
+        packet pack;
+        strcpy(pack.data, data.c_str());
+        to_data_link(&pack, toDL, fromDL);
     }
+    
+    //ssize_t bytesSent=send(sock,msg_buffer.c_str(),msg_buffer.length(),0);
+    //if(bytesSent<msg_buffer.length()){
+    //    perror("Failed to send complete message\n");
+    //    exit(1);
+    //}
 }
 
-int to_data_link(){
+//Sends a packet to the data-link layer
+int to_data_link(packet *p, int toDL, int fromDL){
+    char buff[3];
     
-    return 1;
-}
-
-int to_physical(){
+    //We assume that it waits until a message comes from data-link:
+    read(fromDL, buff, 3);
     
+    if(strcmp(buff, "OK")){
+        write(toDL, p, sizeof(packet));
+    }
+    else{
+        cerr << "data link is out of sync";
+    }
     return 1;
 }
 

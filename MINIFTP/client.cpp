@@ -4,6 +4,7 @@
 #include "header.h" // shared functions/variables between server/client
 #include "client.h" // relative only to client
 #include "data_link.h"
+#include "utilities.h"
 
 // Both must be defined as extern in datalink.cpp
 // so it knows to look here when linking occurs
@@ -114,7 +115,7 @@ int login(int sock){
     parameters.push_back(username);
     parameters.push_back(password);
     
-    sendMessage(MSG_LOGIN,parameters,sock); // send login message to server
+    sendMessage(MSG_LOGIN,parameters,toDL[0], fromDL[1]); // send login message to server
 
     
 #ifdef DEBUG
@@ -227,7 +228,7 @@ int put(vector<string> arguments, int sock){
         return 0;
     }
     
-    sendMessage(MSG_PUT, arguments, sock);
+    sendMessage(MSG_PUT, arguments, toDL[0], fromDL[1]);
     string response=receiveResponse(sock);
     
     string cmd;
@@ -254,7 +255,7 @@ int get(vector<string> arguments, int sock){
         return 0;
     }
     
-    sendMessage(MSG_GET, arguments, sock);
+    sendMessage(MSG_GET, arguments, toDL[0], fromDL[1]);
     string response=receiveResponse(sock);
     
     string cmd;

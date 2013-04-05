@@ -69,7 +69,7 @@ int main(int argc, char **argv){
                 protocol5(client_sock); //?
                 exit(0);
             }
-            else if (pid>0){
+            else if (pidDL>0){
                 cout << "calling in DL layer\n";
                 close(toDL[1]);
                 close(fromDL[0]);
