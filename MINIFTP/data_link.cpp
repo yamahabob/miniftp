@@ -6,7 +6,11 @@
 //  Copyright (c) 2013 WPI. All rights reserved.
 //
 
+#include "header.h"
 #include "data_link.h"
+#include <algorithm> // for max
+
+eventEntry* queueHead=NULL;
 
 static bool between(seq_nr a, seq_nr b, seq_nr c){
     /* Return true if a <= b < c circularly; false otherwise. */
@@ -21,10 +25,10 @@ static void send_data(seq_nr frame_nr, seq_nr frame_expected, packet buffer[], i
     frame s; /* scratch variable */
     //s.info = buffer[frame_nr]; /* insert packet into frame */
     
-    
     // 1. Byte stuffing here
     // 2. FRAGMENTATION OCCURS here
-    //strcpy(s.info,buffer[frame_nr].data);
+    
+    strcpy(s.info,buffer[frame_nr].data);
     
     s.seq = frame_nr; /* insert sequence number into frame */
     s.ack = (frame_expected + MAX_SEQ) % (MAX_SEQ + 1); /* piggyback ack */
@@ -32,7 +36,7 @@ static void send_data(seq_nr frame_nr, seq_nr frame_expected, packet buffer[], i
     start_timer(frame_nr); /* start the timer running */
 }
 
-void protocol5(int network_fd, int sock){
+void protocol5(int sock){ // removed network_fd because it's now global
     seq_nr next_frame_to_send; /* MAX SEQ > 1; used for outbound stream */
     //pipe
     seq_nr ack_expected; /* oldest frame as yet unacknowledged */
@@ -48,7 +52,7 @@ void protocol5(int network_fd, int sock){
     frame_expected = 0; /* number of frame expected inbound */
     nbuffered = 0; /* initially no packets are buffered */
     while (true) {
-        wait_for_event(&event); /* four possibilities: see event type above */
+        wait_for_event(&event,sock); /* four possibilities: see event type above */
         switch(event) {
             case network_layer_ready: /* the network layer has a packet to send */
                 /* Accept, save, and transmit a new frame. */
@@ -64,6 +68,7 @@ void protocol5(int network_fd, int sock){
                     to_network_layer(r.info); /* pass packet to network layer */
                     inc(frame_expected); /* advance lower edge of receiver’s window */
                 }
+                //break?
                 /* Ack n implies n − 1, n − 2, etc. Check for this. */
                 while (between(ack_expected, r.ack, next_frame_to_send)) {
                     /* Handle piggybacked ack. */
@@ -79,6 +84,7 @@ void protocol5(int network_fd, int sock){
                     send_data(next_frame_to_send, frame_expected, buffer, sock);/* resend frame */
                     inc(next_frame_to_send); /* prepare to send the next one */
                 }
+            case dl_die: exit(0);
         }
         if (nbuffered < MAX_SEQ)
             enable_network_layer();
@@ -86,51 +92,40 @@ void protocol5(int network_fd, int sock){
             disable_network_layer();
     }
 }
-void wait_for_event(event_type *event){
-///*
-//#include <sys/types.h>
-//#include <sys/time.h>
-//    
-//#define cchMax 256        
-//    
-//#define fdIn 0
-//#define fdOut 1
-//    
-//    {
-//        int pid;
-//        int fdServer;
-//        char sb[cchMax];
-//        char ch;
-//        int cch;
-//        fd_set bvfdRead;
-//        
-//        
-//        FD_ZERO(&bvfdRead);
-//        FD_SET(fdServer, &bvfdRead);   /* socket for the server */
-//        FD_SET(fdIn, &bvfdRead);            /* fd for stdin */
-//        while (select (fdServer+1, &bvfdRead, 0, 0, 0) > 0) {
-//            /* see what fd's have activity */
-//            if (FD_ISSET(fdServer, &bvfdRead)) {
-//                /* activity on socket (may be EOF) */
-//                cch = read (fdServer, sb, cchMax);
-//                if (cch <= 0)
-//                    exit (0);        /* return of zero is EOF */
-//                write (fdOut, sb, cch);  /* write to stdout */
-//            }
-//            if (FD_ISSET(fdIn, &bvfdRead)) {
-//                /* activity on stdin (may be EOF) */
-//                cch = read (fdIn, sb, cchMax);
-//                if (cch <= 0)
-//                    shutdown (fdServer, 1);                         
-//                else
-//                    write (fdServer, sb, cch);
-//            }
-//            /* get ready for another call to select */
-//            FD_ZERO(&bvfdRead);
-//            FD_SET(fdServer, &bvfdRead);   /* socket for the server */
-//            FD_SET(fdIn, &bvfdRead);        /* fd for stdin */
-//        }
-//    }
+void wait_for_event(event_type *event, int sock){ // dl_die!!
+
+    fd_set bvfdRead;
+
+    FD_ZERO(&bvfdRead);
+    FD_SET(sock, &bvfdRead);   /* socket from receiver */
+    FD_SET(toDL[1], &bvfdRead);            /* pipe from network layer */
+    struct timeval timeToWait;
+    timeToWait.tv_sec=0;
+    timeToWait.tv_usec=0;
+    int curTime=(int)time(NULL);
+    if(queueHead!=NULL){
+        if(FRAME_TIMEOUT-(curTime-queueHead->timestamp)<0){
+            remove_byTime(queueHead, &queueHead, curTime);
+            *event=timeout;
+            return;
+        }
+        else
+            timeToWait.tv_sec=curTime-queueHead->timestamp;
+    }
+    int maxVal=max(toDL[1], sock);
+    if(select(maxVal+1, &bvfdRead, NULL, NULL, &timeToWait)) {
+        /* see what fd's have activity */
+        if (FD_ISSET(sock, &bvfdRead)) {
+            *event=frame_arrival;
+            return;
+        }
+        if (FD_ISSET(toDL[1], &bvfdRead)) {
+            *event=network_layer_ready;
+        }
+    }
+    
+    *event=timeout;
+    return;
 }
 
 /* Fetch a packet from the network layer for transmission on the channel */
@@ -141,7 +136,13 @@ void from_network_layer(packet *p){
 }
 /* Deliver information from an inbound frame to the network layer. */
 
-void to_network_layer(char *f){}
+void to_network_layer(char *f){
+    int bytesSent=(int)write(fromDL[0],f,strlen(f));
+    if(bytesSent<0){
+        perror("well, this sucks...");
+        exit(1);
+    }
+}
 /* Go get an inbound frame from the physical layer and copy it to r. */
 
 void from_physical_layer(frame *f, int sock){
@@ -159,7 +160,7 @@ void to_physical_layer(frame *f, int sock){
         // HERE
     
     // send via TCP
-    // will be replaced with to_data_link()
+    // will be replaced with to_data_link() --> I dunno why this coment is here?
     ssize_t bytesSent=send(sock,f,sizeof(f),0); 
     if(bytesSent<sizeof(f)){
         perror("Failed to send complete frame in to_physical_layer\n");
@@ -169,24 +170,25 @@ void to_physical_layer(frame *f, int sock){
 }
 
 /* Start the clock running and enable the timeout event. */
+// Having a linked list here is simulating  start/stop timer functionality
 void start_timer(seq_nr k){
+    add_eventEntry(queueHead, k, (int)time(NULL), &queueHead);
 }
 
 /* Stop the clock and disable the timeout event. */
 void stop_timer(seq_nr k){
+    remove_bySeq(queueHead, &queueHead, k);
 }
 
-/* Start an auxiliary timer and enable the ack timeout event. */
-void start_ack_timer(void){}
-
-/* Stop the auxiliary timer and disable the ack timeout event. */
-void stop_ack_timer(void){}
-
 /* Allow the network layer to cause a network layer ready event. */
-void enable_network_layer(void){}
+void enable_network_layer(void){
+    //networkEnabled=0;
+}
 
 /* Forbid the network layer from causing a network layer ready event. */
-void disable_network_layer(void){}
+void disable_network_layer(void){
+    //networkEnabled=0;
+}
 
 /* Applies byte stuffing on *input* and puts the result in *output*. The
  function also returns the size of *output*, i.e. the stuffed buffer. */

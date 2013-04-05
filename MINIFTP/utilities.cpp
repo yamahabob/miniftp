@@ -131,7 +131,12 @@ void sendMessage(int cmd, vector<string> parameters, int sock){
         msg_buffer+= DELIM + parameters[i] + DELIM;
     }
     cout << "msg_buffer=" <<msg_buffer << endl;
-    //cout << "sizeof(cmd)==" << sizeof(cmd) <<endl;
+    
+//    while(not end of packet){
+//      while(networkEnabled==1){ // wait for signal from pipe
+//          to_data_link();
+//      }
+//    }
     
     ssize_t bytesSent=send(sock,msg_buffer.c_str(),msg_buffer.length(),0);
     if(bytesSent<msg_buffer.length()){

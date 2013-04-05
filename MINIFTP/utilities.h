@@ -6,8 +6,8 @@
 //  Copyright (c) 2013 WPI. All rights reserved.
 //
 
-#ifndef __MINIFTP__utilities__
-#define __MINIFTP__utilities__
+#ifndef utilities
+#define utilities
 
 #include <iostream>
 

@@ -1,5 +1,8 @@
 #ifndef header_h
 #define header_h
+
+//#pragma once
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -8,6 +11,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <netinet/in.h>
@@ -20,14 +24,16 @@ const string PORT="7766"; // unused port
 const char DELIM=' ';
 const char START_DELIM='S';
 const char END_DELIM='E';
-int toDL[2];
-int fromDL[2];
+
+//int networkEnabled=1;
+typedef unsigned int seq_nr;
 
 //const char DELIM=0x10;
 #define BUFFER_SIZE 100
 #define PAYLOAD_SIZE 100
 #define PACKET_SIZE 192
 #define MAX_MESSAGE_LEN 190 // need to put in design report
+#define FRAME_TIMEOUT 5
 
 // Messages
 #define MSG_LOGIN 0

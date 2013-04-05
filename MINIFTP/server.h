@@ -1,12 +1,9 @@
 #ifndef server_h
 #define server_h
 
-
-
-int processClient(int sock);
+int processClient();
 int serverSetup();
 void receiveCommand(string & line, int sock);
-
 
 #endif
 

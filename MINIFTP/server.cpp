@@ -15,6 +15,12 @@
 #include "server.h"
 #include "data_link.h"
 
+// Both must be defined as extern in datalink.cpp
+// so it knows to look here when linking occurs
+int toDL[2];
+int fromDL[2];
+
+
 int main(int argc, char **argv){
 
     int sock=serverSetup();
@@ -56,17 +62,29 @@ int main(int argc, char **argv){
             pipe(toDL);
             pipe(fromDL);
             
-            //fork datalink()
-            // if child(){
-                //close(toDL[0]);
-                //close(fromDL[1]);
-            //else if parent()
-                //close(toDL[1]);
-                //close(fromDL[0]);
-            
-            cout << "calling in child\n";
-            close(sock);
-            exit(processClient(client_sock));
+            int pidDL;
+            if((pidDL=fork())==0){
+                close(toDL[0]);
+                close(fromDL[1]);
+                protocol5(client_sock); //?
+                exit(0);
+            }
+            else if (pid>0){
+                cout << "calling in DL layer\n";
+                close(toDL[1]);
+                close(fromDL[0]);
+                close(sock);
+                //int returnStatus=processClient(client_sock); // shouldn't have a socket anymore because DL does all transfers
+                int returnStatus=processClient();
+                wait(&pidDL); // HOW DOES DL KNOW TO DIE?
+                exit(returnStatus);
+                
+                //exit(processClient(client_sock));
+            }
+            else{
+                perror("OMG FORK FAILED FOR DL");
+                exit(1);
+            }
             //cout << "shouldn't happen EVER\n";
         }
         else if(pid>0){ // parent
@@ -75,13 +93,16 @@ int main(int argc, char **argv){
             close(client_sock);
         }
         else{ // fork failed
-            perror("OMG FORK FAILED");
+            perror("OMG FORK FAILED FOR CLIENT");
             exit(1);
         }
 	}
 }
 
-int processClient(int sock){
+int processClient(){
+    
+    
+    int sock=0; // THIS NO LONGER EXISTS should be writing everything to pipe, which is global (toDL/fromDL)
     
     // "global" activeUser
     string activeUser;

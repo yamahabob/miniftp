@@ -5,6 +5,11 @@
 #include "client.h" // relative only to client
 #include "data_link.h"
 
+// Both must be defined as extern in datalink.cpp
+// so it knows to look here when linking occurs
+int toDL[2];
+int fromDL[2];
+
 string activeUser="";
 
 // runs the program
@@ -16,17 +21,22 @@ int main(int argc, char **argv){
     while(!exit_status){
         if(login(serverSock)==1){
             // data link fork/pipes are created
-            int fd[2];
-            pipe(fd);
+            pipe(toDL);
+            pipe(fromDL);
             int pid;
             if((pid=fork())==0){
-                close(fd[0]);
-                protocol5(fd[1],serverSock);
+                close(toDL[0]);
+                close(fromDL[1]);
+                protocol5(serverSock);
+#ifdef DEBUG
+                cout << "Closing DL\n";
+#endif
                 exit(0);
             }
             else if(pid>0){
-                close(fd[1]);
-                exit_status=processCommands(fd[0],serverSock); // if just logout->exit=0, if logout_exit->exit=1
+                close(toDL[1]);
+                close(fromDL[0]);
+                exit_status=processCommands(toDL[0],serverSock); // if just logout->exit=0, if logout_exit->exit=1
                 // collect?
                 wait(&pid); // right syntax?
             }
