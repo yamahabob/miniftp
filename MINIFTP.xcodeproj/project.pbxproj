@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F00D477E170F477F0099C51C /* event_queue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F00D477C170F477F0099C51C /* event_queue.cpp */; };
+		F00D477F170F477F0099C51C /* event_queue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F00D477C170F477F0099C51C /* event_queue.cpp */; };
 		F06EC895170B235500CDE0A9 /* client.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC86E170B229800CDE0A9 /* client.cpp */; };
 		F06EC896170B239800CDE0A9 /* server.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC873170B229800CDE0A9 /* server.cpp */; };
 		F06EC897170B239B00CDE0A9 /* data_link.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F06EC870170B229800CDE0A9 /* data_link.cpp */; };
@@ -37,6 +39,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F00D477C170F477F0099C51C /* event_queue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = event_queue.cpp; sourceTree = "<group>"; };
+		F00D477D170F477F0099C51C /* event_queue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = event_queue.h; sourceTree = "<group>"; };
 		F06EC86E170B229800CDE0A9 /* client.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = client.cpp; sourceTree = "<group>"; };
 		F06EC86F170B229800CDE0A9 /* client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = client.h; sourceTree = "<group>"; };
 		F06EC870170B229800CDE0A9 /* data_link.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = data_link.cpp; sourceTree = "<group>"; };
@@ -88,6 +92,8 @@
 		F06EC864170B224C00CDE0A9 /* MINIFTP */ = {
 			isa = PBXGroup;
 			children = (
+				F00D477C170F477F0099C51C /* event_queue.cpp */,
+				F00D477D170F477F0099C51C /* event_queue.h */,
 				F06EC86E170B229800CDE0A9 /* client.cpp */,
 				F06EC86F170B229800CDE0A9 /* client.h */,
 				F06EC870170B229800CDE0A9 /* data_link.cpp */,
@@ -173,6 +179,7 @@
 				F06EC896170B239800CDE0A9 /* server.cpp in Sources */,
 				F06EC898170B239C00CDE0A9 /* data_link.cpp in Sources */,
 				F06EC89A170B23A100CDE0A9 /* utilities.cpp in Sources */,
+				F00D477E170F477F0099C51C /* event_queue.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,6 +190,7 @@
 				F06EC895170B235500CDE0A9 /* client.cpp in Sources */,
 				F06EC897170B239B00CDE0A9 /* data_link.cpp in Sources */,
 				F06EC899170B23A000CDE0A9 /* utilities.cpp in Sources */,
+				F00D477F170F477F0099C51C /* event_queue.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -295,6 +303,7 @@
 				F06EC887170B22E200CDE0A9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		F06EC892170B22ED00CDE0A9 /* Build configuration list for PBXNativeTarget "client" */ = {
 			isa = XCConfigurationList;
@@ -303,6 +312,7 @@
 				F06EC894170B22ED00CDE0A9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
