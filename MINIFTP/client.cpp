@@ -19,34 +19,37 @@ int main(int argc, char **argv){
     checkCommandLine(argc,argv);
     int serverSock=connectToServer();
     int exit_status=0;
-    while(!exit_status){
-        if(login(serverSock)==1){
-            // data link fork/pipes are created
-            pipe(toDL);
-            pipe(fromDL);
-            int pid;
-            if((pid=fork())==0){
-                close(toDL[0]);
-                close(fromDL[1]);
-                protocol5(serverSock);
+    //while(!exit_status){
+    if(1){
+        // data link fork/pipes are created
+        pipe(toDL);
+        pipe(fromDL);
+        int pid;
+        if((pid=fork())==0){
 #ifdef DEBUG
-                cout << "Closing DL\n";
+            cout << "Starting DL\n";
 #endif
-                exit(0);
-            }
-            else if(pid>0){
-                close(toDL[1]);
-                close(fromDL[0]);
-                exit_status=processCommands(toDL[0],serverSock); // if just logout->exit=0, if logout_exit->exit=1
-                // collect?
-                wait(&pid); // right syntax?
-            }
-            else{
-                perror("OMG FORK");
-                exit(1);
-            }
+            close(toDL[1]);
+            close(fromDL[0]);
+            protocol5(serverSock);
+#ifdef DEBUG
+            cout << "Closing DL\n";
+#endif
+            exit(0);
         }
-        
+        else if(pid>0){
+            close(toDL[0]);
+            close(fromDL[1]);
+            if(login(serverSock)==1){
+                exit_status=processCommands(toDL[1],serverSock); // if just logout->exit=0, if logout_exit->exit=1
+                // collect?
+            }
+            wait(&pid); // right syntax?
+        }
+        else{
+            perror("OMG FORK");
+            exit(1);
+        }
     }
 	close(serverSock); // close communicating socket
 	return 0;
@@ -115,14 +118,17 @@ int login(int sock){
     parameters.push_back(username);
     parameters.push_back(password);
     
-    sendMessage(MSG_LOGIN,parameters,toDL[0], fromDL[1]); // send login message to server
-
-    
 #ifdef DEBUG
     cout << "LOGIN USER/PASS=" << username << "/" << password << endl;
 #endif
     
-    string response=receiveResponse(sock);
+    sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0]); // send login message to server
+
+    //sleep(30);
+    
+    //string response=receiveResponse(sock);
+    string response=messageFromDL(fromDL[0]);
+
     
     string cmd;
     vector<string> arguments;
@@ -202,6 +208,7 @@ int processCommands(int dl_fd, int sock){
 }
 
 string receiveResponse(int sock){
+    /*
     char msg_buffer[BUFFER_SIZE];
     ssize_t bytesRec=recv(sock,&msg_buffer,100,0);
     msg_buffer[bytesRec]='\0';
@@ -213,6 +220,8 @@ string receiveResponse(int sock){
         return string(msg_buffer);
     else
         return "";
+     */
+    return "FUCK YOU";
 }
 
 int checkNumArguments(int cmd, vector<string> arguments){
@@ -228,9 +237,11 @@ int put(vector<string> arguments, int sock){
         return 0;
     }
     
-    sendMessage(MSG_PUT, arguments, toDL[0], fromDL[1]);
-    string response=receiveResponse(sock);
+    sendMessage(MSG_PUT, arguments, toDL[1], fromDL[0]);
     
+    //string response=receiveResponse(sock);
+    string response=messageFromDL(fromDL[0]);
+
     string cmd;
     vector<string> args;
     parseMessage(response.c_str(), cmd, args);
@@ -255,7 +266,7 @@ int get(vector<string> arguments, int sock){
         return 0;
     }
     
-    sendMessage(MSG_GET, arguments, toDL[0], fromDL[1]);
+    sendMessage(MSG_GET, arguments, toDL[1], fromDL[0]);
     string response=receiveResponse(sock);
     
     string cmd;
