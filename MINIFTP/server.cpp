@@ -11,9 +11,12 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <errno.h>
+
 #include "header.h"
 #include "server.h"
 #include "data_link.h"
+#include "utilities.h"
+
 
 // Both must be defined as extern in datalink.cpp
 // so it knows to look here when linking occurs
@@ -52,27 +55,46 @@ int main(int argc, char **argv){
 		}
         
         int pid;
-        
-
-        
         if((pid=fork())==0){//child process
             // Two sets of pipes:
             // first pipe allows out ouput (on the FD created by pipe) to be DL layer's input
             // second pipe allows our input to be DL layer's output
-            pipe(toDL);
-            pipe(fromDL);
+            if(pipe(toDL))
+            {
+                fprintf (stderr, "Pipe failed.\n");
+                return EXIT_FAILURE;
+            }
+
+            if(pipe(fromDL))
+            {
+                fprintf (stderr, "Pipe failed.\n");
+                return EXIT_FAILURE;
+            }
+
             
             int pidDL;
             if((pidDL=fork())==0){
-                close(toDL[0]);
-                close(fromDL[1]);
+#ifdef DEBUG
+                cout << "DL layer started\n";
+                //write(fromDL[1],"hello",5);
+                //char buffer[6];
+                //read(fromDL[0],buffer,5);
+                //buffer[5]='\0';
+                //cout << "read from pipe "<< buffer<<endl;
+                //cout << "done reading from pipe\n";
+#endif
+                close(toDL[1]);
+                close(fromDL[0]);
+                //write(fromDL[1],"ShelloE",7);
                 protocol5(client_sock); //?
                 exit(0);
             }
             else if (pidDL>0){
-                cout << "calling in DL layer\n";
-                close(toDL[1]);
-                close(fromDL[0]);
+#ifdef DEBUG
+                cout << "Processing client started\n";
+#endif
+                close(toDL[0]);
+                close(fromDL[1]);
                 close(sock);
                 //int returnStatus=processClient(client_sock); // shouldn't have a socket anymore because DL does all transfers
                 int returnStatus=processClient();
@@ -100,8 +122,6 @@ int main(int argc, char **argv){
 }
 
 int processClient(){
-    
-    
     int sock=0; // THIS NO LONGER EXISTS should be writing everything to pipe, which is global (toDL/fromDL)
     
     // "global" activeUser
@@ -109,21 +129,28 @@ int processClient(){
     
     char msg[BUFFER_SIZE];
     memset(msg,0,BUFFER_SIZE);
-    size_t bytesRec=recv(sock,msg,BUFFER_SIZE,0);
-    msg[bytesRec]='\0';
-#ifdef DEBUG
-    cout <<"Received="<< msg<< " rec bytes=" << bytesRec << endl;
-#endif
-    if((int)bytesRec < 0){
-        perror("Receive from client");
-        cout<<"strerrno=" <<errno << endl;
-        exit(1);
-    }
+    //size_t bytesRec=recv(sock,msg,BUFFER_SIZE,0);
+//    msg[bytesRec]='\0';
+//#ifdef DEBUG
+//    cout <<"Received="<< msg<< " rec bytes=" << bytesRec << endl;
+//#endif
+//    if((int)bytesRec < 0){
+//        perror("Receive from client");
+//        cout<<"strerrno=" <<errno << endl;
+//        exit(1);
+//    }
     
+    string messageReceived=messageFromDL(fromDL[0]);
+    //exit(1);
+    cout << "!!!Message received from DL in Server app--" << messageReceived << endl;
+    //cout << "Pausing Server APP. if continued, things will break";
+    
+    // LOGIN
     string cmd="";
     vector<string> arguments;
-    
     parseMessage(msg, cmd, arguments);
+    
+    
     
     
     // Verifying credentials against "shadow" file
@@ -132,11 +159,15 @@ int processClient(){
         activeUser=""; // fill in
         
         //send "OK"
-        size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
-        if((int)bytesSent < sizeof(MSG_OK)){
-            perror("Sending to client:");
-            exit(1);
-        }
+        //size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
+        //if((int)bytesSent < sizeof(MSG_OK)){
+        //    perror("Sending to client:");
+        //    exit(1);
+        //}
+        
+        vector<string> empty;
+        sendMessage(MSG_OK,empty,toDL[1], fromDL[0]); // send login message to server
+        
         
         while(1){ // until logout
             // receive next command from client
@@ -207,12 +238,15 @@ int processClient(){
 }
 
 void receiveCommand(string & line, int sock){
-    
+   /*
     //char msg[PACKET_SIZE];
-    packet msg;
-    memset(msg.data,0,PACKET_SIZE);
-    size_t bytesRec=recv(sock,msg.data,PACKET_SIZE,0);
-    msg.data[bytesRec]='\0';
+    //packet msg;
+    //memset(msg.data,0,PACKET_SIZE);
+    //size_t bytesRec=recv(sock,msg.data,PACKET_SIZE,0);
+    //msg.data[bytesRec]='\0';
+    
+    cout <<"Read to receive command from client\n";
+    
     
 #ifdef DEBUG
     cout <<"Received="<< msg.data<< " rec bytes=" << bytesRec << endl;
@@ -223,7 +257,12 @@ void receiveCommand(string & line, int sock){
         exit(1);
     }
     line=string(msg.data);
-    
+    */
+    cout << "Wanting command from client!\n";
+    line=messageFromDL(fromDL[0]);
+    int temp;
+    cin >> temp;
+    cout << "First command from client=" << line << endl;
 }
 
 int serverSetup(){

@@ -75,7 +75,13 @@ int remove_byTime(eventEntry* head, eventEntry** newHead, int curTime){//removes
         eventEntry* prev = NULL;
         
         while(ptr != NULL){ //traverse the list
-            if((ptr->timestamp-curTime)>FRAME_TIMEOUT){
+#ifdef DEBUG
+            cout << curTime << "-" << ptr->timestamp << ">" << FRAME_TIMEOUT << "=" << ((curTime-ptr->timestamp)>FRAME_TIMEOUT) <<endl;
+#endif
+            if((curTime-ptr->timestamp)>=FRAME_TIMEOUT){
+#ifdef DEBUG
+                cout << "Removing element from list\n";
+#endif
                 if(ptr==head){
                     //update head and remove
                     *newHead=ptr->next;

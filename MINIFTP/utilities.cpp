@@ -50,7 +50,7 @@ int sendData(int cmd, vector<string> parameters, int sock){
         memset(temp_msg_buffer.data,'\0',PACKET_SIZE); // null ensures strlen works
         
         fin.read(temp_msg_buffer.data,PACKET_SIZE-2); // worst case, only 1 packet and it will
-                                                 // need both start and end DELIM
+        // need both start and end DELIM
         int bytesRead=(int)fin.gcount(); // originally a long casted to int
         // returns the number of bytes read
         
@@ -131,9 +131,9 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL){
     for(int i=0;i<parameters.size();i++){
         msg_buffer+= DELIM + parameters[i] + DELIM;
     }
-    cout << "msg_buffer=" <<msg_buffer << endl;
-    
     msg_buffer += END_DELIM;
+    cout << "msg_buffer=\"" <<msg_buffer << "\"\n";
+
     
     unsigned long i = 0;
     
@@ -141,14 +141,14 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL){
     //data-link process.
     while(i < msg_buffer.length()){
         unsigned long len = msg_buffer.length() - i > PACKET_SIZE ?
-                    msg_buffer.length() - i :
-                    PACKET_SIZE;
+        msg_buffer.length() - i :
+        PACKET_SIZE;
         string data = msg_buffer.substr(i, len);
         packet pack;
         strcpy(pack.data, data.c_str());
         to_data_link(&pack, toDL, fromDL);
+        i+=len;
     }
-    
     //ssize_t bytesSent=send(sock,msg_buffer.c_str(),msg_buffer.length(),0);
     //if(bytesSent<msg_buffer.length()){
     //    perror("Failed to send complete message\n");
@@ -158,17 +158,89 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL){
 
 //Sends a packet to the data-link layer
 int to_data_link(packet *p, int toDL, int fromDL){
-    char buff[3];
+    //char buff[3];
     
     //We assume that it waits until a message comes from data-link:
-    read(fromDL, buff, 3);
+#ifdef DEBUG
+    cout <<"Checking if DL is OK" << endl;
+#endif
+    //read(fromDL, buff, 3);
+#ifdef DEBUG
+    //cout <<"DL returned -- " << buff << endl;
+#endif
     
-    if(strcmp(buff, "OK")){
-        write(toDL, p, sizeof(packet));
-    }
-    else{
-        cerr << "data link is out of sync";
-    }
+    
+    //if(strcmp(buff, "OK")){
+        //write(toDL, p->data, strlen(p->data));
+    write(toDL, p, sizeof(packet));
+    cout << "\nSENT TO DL\n";
+    //}
+    //else{
+       // cerr << "data link is out of sync";
+    //}
     return 1;
 }
+
+string messageFromDL(int fromDL){
+#ifdef DEBUG
+    cout <<"Starting messsageFromDL" << endl;
+#endif
+    string message;
+    char buffer;
+    int packetNum=0;
+    int bytesRec=0;
+    int bytesTotal=0;
+    while(packetNum<1){
+        while((bytesRec=read(fromDL,&buffer,1)>0)){
+            bytesTotal+=bytesRec;
+            if(packetNum==0 && buffer!=START_DELIM){
+                message+=buffer;
+                cerr << "Message doesn't start with START_DELIM. Message ==" << message <<endl;
+                exit(1);
+            }
+            else if(buffer==END_DELIM){
+                message+=buffer;
+                break;
+            }
+            message+=buffer;
+            packetNum++;
+        }
+        //cout << "bytesRec=" << bytesRec << " " << strerror(errno) <<endl;
+    }
+    
+    if(errno!=0){
+        cout << "errno set! -- " << errno << " with error:" << strerror(errno) << endl;
+    }
+    
+#ifdef DEBUG
+    cout <<"Message being returned from DL="<< message<< " -- Total rec bytes=" << bytesTotal << endl;
+#endif
+    return message;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
