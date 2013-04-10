@@ -22,11 +22,13 @@
 // so it knows to look here when linking occurs
 int toDL[2];
 int fromDL[2];
-
+int signalFromDL[2];
+int errorRate=-1;
 
 int main(int argc, char **argv){
 
     int sock=serverSetup();
+    srand((int)time(NULL));
     
     
 	printf("Now accepting connections\n");
@@ -59,14 +61,15 @@ int main(int argc, char **argv){
             // Two sets of pipes:
             // first pipe allows out ouput (on the FD created by pipe) to be DL layer's input
             // second pipe allows our input to be DL layer's output
-            if(pipe(toDL))
-            {
+            if(pipe(toDL)){
                 fprintf (stderr, "Pipe failed.\n");
                 return EXIT_FAILURE;
             }
-
-            if(pipe(fromDL))
-            {
+            if(pipe(fromDL)){
+                fprintf (stderr, "Pipe failed.\n");
+                return EXIT_FAILURE;
+            }
+            if(pipe(signalFromDL)){
                 fprintf (stderr, "Pipe failed.\n");
                 return EXIT_FAILURE;
             }
@@ -166,7 +169,7 @@ int processClient(){
         //}
         
         vector<string> empty;
-        sendMessage(MSG_OK,empty,toDL[1], fromDL[0]); // send login message to server
+        sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
         
         
         while(1){ // until logout
@@ -188,12 +191,15 @@ int processClient(){
             }
             // put
             else if(strcasecmp(cmd.c_str(),"3")==0){
-                size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
-                if((int)bytesSent < sizeof(MSG_OK)){
-                    perror("Sending to client:");
-                    exit(1);
-                }
-                int retVal=receiveData(arguments, sock);
+//                size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
+//                if((int)bytesSent < sizeof(MSG_OK)){
+//                    perror("Sending to client:");
+//                    exit(1);
+//                }
+                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
+                //int retVal=receiveData(arguments, sock);
+                int retVal=receiveData(arguments, sock,fromDL[0]);
+                
                 if(retVal==0)
                     cout << "Failed to received file\n";
                 else
@@ -207,7 +213,7 @@ int processClient(){
                     perror("Sending to client:");
                     exit(1);
                 }
-                int retVal=sendData(MSG_DATA,arguments, sock);
+                int retVal=0;//=sendData(MSG_DATA,arguments, sock);
                 if(retVal==0)
                     cout << "Failed to send file\n";
                 else
@@ -260,8 +266,8 @@ void receiveCommand(string & line, int sock){
     */
     cout << "Wanting command from client!\n";
     line=messageFromDL(fromDL[0]);
-    int temp;
-    cin >> temp;
+//    int temp;
+  //  cin >> temp;
     cout << "First command from client=" << line << endl;
 }
 

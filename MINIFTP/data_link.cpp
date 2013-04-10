@@ -20,19 +20,25 @@ static bool between(seq_nr a, seq_nr b, seq_nr c){
         return(false);
 }
 
-static void send_data(seq_nr frame_nr, seq_nr frame_expected, packet buffer[], int sock){
+static void send_data(seq_nr frame_nr, seq_nr frame_expected, frame buffer[], int sock){
     /* Construct and send a data frame. */
     frame s; /* scratch variable */
     //s.info = buffer[frame_nr]; /* insert packet into frame */
     
-    // 1. Byte stuffing here
-    // 2. FRAGMENTATION OCCURS here
+    //strcpy(s.info,buffer[frame_nr].info);
+    memcpy(s.info, buffer[frame_nr].info,PAYLOAD_SIZE);
     
-    strcpy(s.info,buffer[frame_nr].data);
-    cout << "frame info being send=" << s.info << endl;
+    //cout << "frame info being send=" << s.info << endl;
     s.kind=data;
     s.seq = frame_nr; /* insert sequence number into frame */
-    s.ack = (frame_expected + MAX_SEQ) % (MAX_SEQ + 1); /* piggyback ack */
+
+    char result[CHECK_SUM_LENGTH];
+    checksum(s.info, PAYLOAD_SIZE, result);
+    memcpy(s.checkSum,result,2);
+    cout << "SENDING r0=" << (int)(result[0]) << " r1=" <<  (int)result[1]<<endl;
+
+    //s.ack = (frame_expected + MAX_SEQ) % (MAX_SEQ + 1); /* piggyback ack */
+    //s.ack = (frame_expected + MAX_SEQ) % (MAX_SEQ + 1); /* piggyback ack */
     to_physical_layer(&s,sock); /* transmit the frame */
     start_timer(frame_nr); /* start the timer running */
 }
@@ -43,8 +49,11 @@ void protocol5(int sock){ // removed network_fd because it's now global
     seq_nr ack_expected; /* oldest frame as yet unacknowledged */
     seq_nr frame_expected; /* next frame expected on inbound stream */
     frame r; /* scratch variable */
-    packet buffer[MAX_SEQ + 1]; /* buffers for the outbound stream */
+    //packet buffer[MAX_SEQ + 1]; /* buffers for the outbound stream */
+    frame buffer[MAX_SEQ + 1]; /* buffers for the outbound stream */
+    frame reserved[MAX_FRAME_SPLIT - 1]; /* buffers for the outbound stream */
     seq_nr nbuffered; /* number of output buffers currently in use */
+    seq_nr nReserveredbuffer;
     seq_nr i; /* used to index into the buffer array */
     event_type event;
     enable_network_layer(); /* allow network layer ready events */
@@ -52,6 +61,7 @@ void protocol5(int sock){ // removed network_fd because it's now global
     next_frame_to_send = 0; /* next frame going out */
     frame_expected = 0; /* number of frame expected inbound */
     nbuffered = 0; /* initially no packets are buffered */
+    nReserveredbuffer=0;
     while (true) {
 #ifdef DEBUG
         cout << "WAITING FOR EVENT IN DL\n";
@@ -62,14 +72,28 @@ void protocol5(int sock){ // removed network_fd because it's now global
 #endif
         switch(event) {
             case network_layer_ready: /* the network layer has a packet to send */
+            {
                 /* Accept, save, and transmit a new frame. */
-                from_network_layer(&buffer[next_frame_to_send]); /* fetch new packet */
-                nbuffered = nbuffered + 1; /* expand the sender’s window */
-                send_data(next_frame_to_send, frame_expected, buffer, sock);/* transmit the frame */
-                inc(next_frame_to_send); /* advance sender’s upper window edge */
+                //from_network_layer(&buffer[next_frame_to_send]); /* fetch new packet */
+                int numFramesCreated=from_network_layer(buffer, next_frame_to_send); /* fetch new packet */
+                for(int i=0;i<numFramesCreated;i++){
+                    nbuffered = nbuffered + 1; /* expand the sender’s window */
+                    send_data(next_frame_to_send, frame_expected, buffer, sock);/* transmit the frame */
+                    inc(next_frame_to_send); /* advance sender’s upper window edge */
+                    
+                }
                 break;
+            }
             case frame_arrival: /* a data or control frame has arrived */
                 from_physical_layer(&r,sock); /* get incoming frame from physical layer */
+                if(!checksumFrame(r)){
+#ifdef DEBUG
+                    cout << "CHECK SUM ERROR\n";
+                    //int temp;
+                    //cin >> temp;
+#endif 
+                    break;
+                }
                 cout << "r.seq=" << r.seq << " r.kind=" << r.kind << endl;
                 if (r.seq == frame_expected && r.kind==data) {
                     /* Frames are accepted only in order. */
@@ -81,6 +105,7 @@ void protocol5(int sock){ // removed network_fd because it's now global
                     frame ackFrame;
                     memcpy(&ackFrame, &r,sizeof(r));
                     ackFrame.kind=ack;
+                    ackFrame.ack=ackFrame.seq;
                     to_physical_layer(&ackFrame, sock);
                 }
                 else if(r.kind==data){
@@ -88,19 +113,21 @@ void protocol5(int sock){ // removed network_fd because it's now global
                     cout << "SENDING ACK FRAME2\n";
                     frame ackFrame;
                     memcpy(&ackFrame, &r,sizeof(r));
-                    ackFrame.seq=ackFrame.seq-1;
+                    ackFrame.ack=frame_expected-1;
+                    //ackFrame.seq=ackFrame.seq-1;
                     ackFrame.kind=ack;
                     to_physical_layer(&ackFrame, sock);
                 }
-                
-                /* Ack n implies n − 1, n − 2, etc. Check for this. */
-                cout << "CHECKING between(" << ack_expected << "," << r.ack << "," << next_frame_to_send <<")\n";
-                while (between(ack_expected, r.ack, next_frame_to_send)) {
-                    /* Handle piggybacked ack. */
-                    cout << "stopping timer for "<< ack_expected << endl;
-                    nbuffered = nbuffered - 1; /* one frame fewer buffered */
-                    stop_timer(ack_expected); /* frame arrived intact; stop timer */
-                    inc(ack_expected); /* contract sender’s window */
+                else{ // means it's an ACK frame
+                    /* Ack n implies n − 1, n − 2, etc. Check for this. */
+                    cout << "CHECKING between(" << ack_expected << "," << r.ack << "," << next_frame_to_send <<")\n";
+                    while (between(ack_expected, r.ack, next_frame_to_send)) {
+                        /* Handle piggybacked ack. */
+                        cout << "stopping timer for "<< ack_expected << endl;
+                        nbuffered = nbuffered - 1; /* one frame fewer buffered */
+                        stop_timer(ack_expected); /* frame arrived intact; stop timer */
+                        inc(ack_expected); /* contract sender’s window */
+                    }
                 }
                 //int temp;
                 //cin>>temp;
@@ -116,6 +143,7 @@ void protocol5(int sock){ // removed network_fd because it's now global
                 break;
             case dl_die: exit(0);
         }
+        
         if (nbuffered < MAX_SEQ)
             enable_network_layer();
         else
@@ -207,14 +235,17 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
 }
 
 /* Fetch a packet from the network layer for transmission on the channel */
-void from_network_layer(packet *p){
+//void from_network_layer(packet *p){
+int from_network_layer(frame buffer[], int next_frame_to_send){ /* fetch new packet */
     char temp[PACKET_SIZE];
     int bytesRec=(int)read(toDL[0],temp,PACKET_SIZE);
-    strncpy(p->data,temp,bytesRec);
+    strncpy(buffer[next_frame_to_send].info,temp,bytesRec);
+    return 1;
+
     cout << "DL read from network layer -- " << temp << endl;
 }
-/* Deliver information from an inbound frame to the network layer. */
 
+/* Deliver information from an inbound frame to the network layer. */
 void to_network_layer(char *f){
     int bytesSent=(int)write(fromDL[1],f,strlen(f));
     if(bytesSent<0){
@@ -237,10 +268,17 @@ void from_physical_layer(frame *f, int sock){
     f->kind=temp.kind;
     f->seq=temp.seq;
     f->ack=temp.ack;
-    strcpy(f->info,temp.info);
+    //memcpy(f->checkSum,temp.checkSum,2);
+    f->checkSum[0]=temp.checkSum[0];
+    f->checkSum[1]=temp.checkSum[1];
+    //strcpy(f->info,temp.info);
+    memcpy(f->info, temp.info, PAYLOAD_SIZE);
     cout << "bytesRec=" << bytesRec<<endl;
     cout << "frame info received=" << f->info << endl;
-    cout << "frame received=" << f << endl;
+    //cout << "frame received=" << f << endl;
+    cout << "In PHY : f0=" << (int)f->checkSum[0] << " f1=" << (int)f->checkSum[1] << endl;
+    cout << "In PHY : temp0=" << (int)temp.checkSum[0] << " temp1=" << (int)temp.checkSum[1] << endl;
+
 
 #ifdef DEBUG
     cout << "Leaving from_physical\n";
@@ -250,8 +288,8 @@ void from_physical_layer(frame *f, int sock){
 /* Pass the frame to the physical layer for transmission. */
 
 void to_physical_layer(frame *f, int sock){
-    // zap frame
-        // HERE
+    // ZAP
+    bzzzzzzzuppp(f);
     
     // send via TCP
     // will be replaced with to_data_link() --> I dunno why this coment is here?
@@ -259,8 +297,10 @@ void to_physical_layer(frame *f, int sock){
     temp.kind=f->kind;
     temp.seq=f->seq;
     temp.ack=f->ack;
-    strcpy(temp.info,f->info);
-    cout << "sizeof(temp)=" << sizeof(frame) << endl;
+    temp.checkSum[0]=f->checkSum[0];
+    temp.checkSum[1]=f->checkSum[1];
+    memcpy(temp.info, f->info, PAYLOAD_SIZE);//(temp.info,f->info);
+    cout << "sizeof(temp)=" << sizeof(frame) << " length= " << strlen(temp.info) << endl;
     ssize_t bytesSent=send(sock,&temp,sizeof(frame),0);
     if(bytesSent<sizeof(f)){
         perror("Failed to send complete frame in to_physical_layer\n");
@@ -284,12 +324,16 @@ void stop_timer(seq_nr k){
 
 /* Allow the network layer to cause a network layer ready event. */
 void enable_network_layer(void){
-    //networkEnabled=0;
+    //1==enabled
+    char status='1';
+    write(signalFromDL[1],&status,1);
 }
 
 /* Forbid the network layer from causing a network layer ready event. */
 void disable_network_layer(void){
-    //networkEnabled=0;
+    //0==disabled
+    char status='0';
+    write(signalFromDL[1],&status,1);
 }
 
 /* Applies byte stuffing on *input* and puts the result in *output*. The
@@ -313,9 +357,13 @@ int byteStuff(char *input, char *output){
  *input*. The function returns 1 on success. If the size of input is less
  than 2, the checksum cannot be computed; thus, the function returns -1.
  */
-int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH+1]){
-    if(size < 2)
+int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]){
+    //cout << "Computing CS for " << input << endl;
+    if(size < 2){
+        result[0] = input[0];
+        result[1] = input[0];
         return -1;
+    }
     
     result[0] = input[0];
     result[1] = input[1];
@@ -323,7 +371,7 @@ int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH+1]){
     for(int i = 2; i < size; i++){
         result[i%2] ^= input[i];
     }
-    result[2]='\0';
+    //result[2]='\0';
     
     return 1;
 }
@@ -339,6 +387,23 @@ int splitFrame(char *stuffedPacket, char rawFrames[MAX_FRAME_SPLIT][PAYLOAD_SIZE
     return i;
 }
 
+void bzzzzzzzuppp(frame *f){
+    int randNum=rand()%101;
+    if(0<=randNum && randNum<=errorRate){
+        cout << "GOT ZAPPED with number=" << randNum <<endl;
+        f->checkSum[0]=!f->checkSum[1];
+    }
+}
+
+int checksumFrame(frame f){
+    char result[2];
+    checksum(f.info, PAYLOAD_SIZE, result);
+    cout << "r0=" << (int)(result[0]) << " f0=" << (int)f.checkSum[0] << " r1=" <<  (int)result[1] << " f1="<< (int)f.checkSum[1] <<endl;
+    if(result[0]==f.checkSum[0] && result[1]==f.checkSum[1])
+        return 1;
+    else
+        return 0;
+}
 
 
 

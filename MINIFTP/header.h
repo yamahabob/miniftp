@@ -25,7 +25,6 @@ const char DELIM=' ';
 const char START_DELIM='S';
 const char END_DELIM='E';
 
-//int networkEnabled=1;
 typedef unsigned int seq_nr;
 
 //const char DELIM=0x10;

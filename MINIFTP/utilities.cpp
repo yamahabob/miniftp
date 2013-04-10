@@ -32,7 +32,7 @@ void parseMessage(const char* msg, string & command,
     }
 }
 
-int sendData(int cmd, vector<string> parameters, int sock){
+int sendData(int cmd, vector<string> parameters, int toDL, int fromDL, int signalFromDL){
     ifstream fin;
     fin.open(parameters[0],ios::in);
     if(!fin.is_open()){
@@ -71,17 +71,20 @@ int sendData(int cmd, vector<string> parameters, int sock){
         }
         
         // will be replaced with to_data_link()
-        ssize_t bytesSent=send(sock,msg_buffer.data,bytesRead,0);
-        if(bytesSent<bytesRead){
-            perror("Failed to send complete message in sendServerData\n");
-            exit(1);
-        }
+        //ssize_t bytesSent=send(sock,msg_buffer.data,bytesRead,0);
+        //if(bytesSent<bytesRead){
+        //   perror("Failed to send complete message in sendServerData\n");
+        //    exit(1);
+        //}else
+        
+        //NO MECHANISM FOR LIMITING DATA TO DL
+        to_data_link(&msg_buffer, toDL, fromDL, signalFromDL);
         packetNum++;
     }
     return 1;
 }
 
-int receiveData(vector<string> arguments, int sock){
+int receiveData(vector<string> arguments, int sock, int fromDL){
     ofstream fout;
     fout.open(arguments[0]);
     if(!fout.is_open()){
@@ -92,41 +95,47 @@ int receiveData(vector<string> arguments, int sock){
     
     //Now that file is open, receive and write
     //char packet_buffer[PACKET_SIZE];
-    packet packet_buffer;
-    int packetNum=0;
+    //packet packet_buffer;
+    //int packetNum=0;
     
-    while(1){
-        memset(packet_buffer.data,'\0',PACKET_SIZE);
-        size_t bytesRec=recv(sock,packet_buffer.data,PACKET_SIZE,0);
-        if((int)bytesRec < 0){
-            perror("Failed to received file from client");
-            cout<<"strerrno=" <<errno << endl;
-            exit(1);
-        }
-        cout << packetNum+1 << ". \""<<packet_buffer.data << "\""<< endl;
-        
-        
-        if(packetNum==0 && packet_buffer.data[bytesRec-1]!=END_DELIM){
-            fout.write(packet_buffer.data+1, bytesRec-1);
-        }else if(packetNum!=0 && packet_buffer.data[bytesRec-1]!=END_DELIM){
-            fout.write(packet_buffer.data, bytesRec);
-        } else if(packetNum==0 && packet_buffer.data[bytesRec-1]==END_DELIM){
-            fout.write(packet_buffer.data+1, bytesRec-2);
-            fout.close();
-            return 1;
-        } else if(packetNum!=0 && packet_buffer.data[bytesRec-1]==END_DELIM){
-            fout.write(packet_buffer.data, bytesRec-1);
-            fout.close();
-            return 1;
-        }
-        packetNum++;
-    }
+    string dataReceived=messageFromDL(fromDL);
+    cout << "dataReceived=" << dataReceived << endl;
+    fout.write(dataReceived.c_str(), dataReceived.length());
+    fout.close();
+    int temp;
+    cin>>temp;
+//    while(1){
+//        memset(packet_buffer.data,'\0',PACKET_SIZE);
+//        size_t bytesRec=recv(sock,packet_buffer.data,PACKET_SIZE,0);
+//        if((int)bytesRec < 0){
+//            perror("Failed to received file from client");
+//            cout<<"strerrno=" <<errno << endl;
+//            exit(1);
+//        }
+//        cout << packetNum+1 << ". \""<<packet_buffer.data << "\""<< endl;
+//        
+//        
+//        if(packetNum==0 && packet_buffer.data[bytesRec-1]!=END_DELIM){
+//            fout.write(packet_buffer.data+1, bytesRec-1);
+//        }else if(packetNum!=0 && packet_buffer.data[bytesRec-1]!=END_DELIM){
+//            fout.write(packet_buffer.data, bytesRec);
+//        } else if(packetNum==0 && packet_buffer.data[bytesRec-1]==END_DELIM){
+//            fout.write(packet_buffer.data+1, bytesRec-2);
+//            fout.close();
+//            return 1;
+//        } else if(packetNum!=0 && packet_buffer.data[bytesRec-1]==END_DELIM){
+//            fout.write(packet_buffer.data, bytesRec-1);
+//            fout.close();
+//            return 1;
+//        }
+//        packetNum++;
+//    }
     
     return 0;
 }
 
 // Sends a string to server - separated by DLE byte
-void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL){
+void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int signalFromDL){
     string msg_buffer= START_DELIM + to_string(cmd);
     for(int i=0;i<parameters.size();i++){
         msg_buffer+= DELIM + parameters[i] + DELIM;
@@ -146,7 +155,7 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL){
         string data = msg_buffer.substr(i, len);
         packet pack;
         strcpy(pack.data, data.c_str());
-        to_data_link(&pack, toDL, fromDL);
+        to_data_link(&pack, toDL, fromDL, signalFromDL);
         i+=len;
     }
     //ssize_t bytesSent=send(sock,msg_buffer.c_str(),msg_buffer.length(),0);
@@ -157,7 +166,7 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL){
 }
 
 //Sends a packet to the data-link layer
-int to_data_link(packet *p, int toDL, int fromDL){
+int to_data_link(packet *p, int toDL, int fromDL, int sigFromDL){
     //char buff[3];
     
     //We assume that it waits until a message comes from data-link:
@@ -172,6 +181,11 @@ int to_data_link(packet *p, int toDL, int fromDL){
     
     //if(strcmp(buff, "OK")){
         //write(toDL, p->data, strlen(p->data));
+    
+    char dlStatus='0';
+    while(dlStatus=='0'){
+        read(sigFromDL, &dlStatus, 1);
+    }
     write(toDL, p, sizeof(packet));
     cout << "\nSENT TO DL\n";
     //}
@@ -194,18 +208,18 @@ string messageFromDL(int fromDL){
         while((bytesRec=read(fromDL,&buffer,1)>0)){
             bytesTotal+=bytesRec;
             if(packetNum==0 && buffer!=START_DELIM){
-                message+=buffer;
+                //message+=buffer;
                 cerr << "Message doesn't start with START_DELIM. Message ==" << message <<endl;
                 exit(1);
             }
             else if(buffer==END_DELIM){
-                message+=buffer;
+                //message+=buffer;
                 break;
             }
-            message+=buffer;
+            else if(buffer!=START_DELIM)
+                message+=buffer;
             packetNum++;
         }
-        //cout << "bytesRec=" << bytesRec << " " << strerror(errno) <<endl;
     }
     
     if(errno!=0){
