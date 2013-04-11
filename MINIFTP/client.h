@@ -3,13 +3,13 @@
 void checkCommandLine(int argc, char** argv); // sets serverAddress
 string serverAddress;
 int connectToServer();
-int processCommands(int fd, int sock);
+int processCommands(int fd);
 string receiveResponse(int sock);
 
 int serverSocket;
 
 // Commands
-int login(int sock);
+int login();
 int put(vector<string> arguments, int sock);
 int get(vector<string> arguments, int sock);
 

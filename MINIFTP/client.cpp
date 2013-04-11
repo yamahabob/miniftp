@@ -49,8 +49,9 @@ int main(int argc, char **argv){
             close(toDL[0]);
             close(fromDL[1]);
             close(signalFromDL[1]);
-            if(login(serverSock)==1){
-                exit_status=processCommands(toDL[1],serverSock); // if just logout->exit=0, if logout_exit->exit=1
+            close(serverSock); // close communicating socket
+            if(login()==1){
+                exit_status=processCommands(toDL[1]); // if just logout->exit=0, if logout_exit->exit=1
                 // collect?
             }
             wait(&pid); // right syntax?
@@ -60,7 +61,6 @@ int main(int argc, char **argv){
             exit(1);
         }
     }
-	close(serverSock); // close communicating socket
 	return 0;
 }
 
@@ -124,7 +124,7 @@ int connectToServer(){
 }
 
 // Prompts user for username and password to relay to server
-int login(int sock){
+int login(){
     
     if(activeUser!=""){
         cout << "User " << activeUser << " already logged in\n";
@@ -160,6 +160,8 @@ int login(int sock){
     
     
     cout << "RESPONSE=" << cmd << endl;
+    int temp;
+    cin >> temp;
     
     //replace this with conversion function
     if(atoi(cmd.c_str())==MSG_OK)
@@ -168,7 +170,7 @@ int login(int sock){
         return 0;
 }
 
-int processCommands(int dl_fd, int sock){
+int processCommands(int dl_fd){
     int exit=0;
     while(1){
         //string line;
@@ -187,7 +189,7 @@ int processCommands(int dl_fd, int sock){
         cout << "Argument of 0" << arguments[0] << endl;
         
         if(strcasecmp(cmd.c_str(),"login")==0){
-            login(sock); // ignoring return value of login (1)
+            login(); // ignoring return value of login (1)
         }
         else if(strcasecmp(cmd.c_str(),"logout")==0){
             activeUser="";
@@ -197,7 +199,7 @@ int processCommands(int dl_fd, int sock){
         }
         else if(strcasecmp(cmd.c_str(),"put")==0){
             
-            int retVal=put(arguments, sock);
+            int retVal=0;//=put(arguments, sock);
             if(retVal==0)
                 cout << "Failed to transmit file\n";
             else
@@ -205,7 +207,7 @@ int processCommands(int dl_fd, int sock){
             
         }
         else if(strcasecmp(cmd.c_str(),"get")==0){
-            int retVal=get(arguments, sock);
+            int retVal=0;//;=get(arguments, sock);
             if(retVal==0)
                 cout << "Failed to receive file\n";
             else

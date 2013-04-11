@@ -58,6 +58,7 @@ void disable_network_layer(void);
 
 
 #define MAX_SEQ 7
+#define FRAME_SIZE 120
 
 void protocol5(int sock); //removed network_fd see .cpp file
 static bool between(seq_nr a, seq_nr b, seq_nr c);
@@ -69,5 +70,6 @@ void bzzzzzzzuppp(frame *f);
 int checksumFrame(frame f);
 int fragment(char *stuffedPacket, frame rawFrames[MAX_FRAME_SPLIT], int size);
 int split(packet *p, frame buffer[], vector<frame> & reserved, int next_frame_to_send, seq_nr nbuffered);
+void sendAck(frame *r, int sock);
 
 #endif

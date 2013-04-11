@@ -102,8 +102,8 @@ int receiveData(vector<string> arguments, int sock, int fromDL){
     cout << "dataReceived=" << dataReceived << endl;
     fout.write(dataReceived.c_str(), dataReceived.length());
     fout.close();
-    int temp;
-    cin>>temp;
+    //int temp;
+    //cin>>temp;
 //    while(1){
 //        memset(packet_buffer.data,'\0',PACKET_SIZE);
 //        size_t bytesRec=recv(sock,packet_buffer.data,PACKET_SIZE,0);
@@ -141,7 +141,7 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int s
         msg_buffer+= DELIM + parameters[i] + DELIM;
     }
     msg_buffer += END_DELIM;
-    cout << "msg_buffer=\"" <<msg_buffer << "\"\n";
+    cout << "msg_buffer=\"" <<msg_buffer << "\" with size " << msg_buffer.length() << "\n";
 
     
     unsigned long i = 0;
@@ -149,20 +149,18 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int s
     //Break the message into packets and send each packet individually to the
     //data-link process.
     while(i < msg_buffer.length()){
-        unsigned long len = msg_buffer.length() - i > PACKET_SIZE ?
-        msg_buffer.length() - i :
-        PACKET_SIZE;
+        cout << "MSG LEN from NL=" << i << endl;
+        //unsigned long len = msg_buffer.length() - i > PACKET_SIZE ?
+        //msg_buffer.length() - i :
+        //    PACKET_SIZE;
+        unsigned long len=PACKET_SIZE;
         string data = msg_buffer.substr(i, len);
         packet pack;
-        strcpy(pack.data, data.c_str());
+        //strcpy(pack.data, data.c_str());
+        memcpy(pack.data, data.c_str(),len);
         to_data_link(&pack, toDL, fromDL, signalFromDL);
         i+=len;
     }
-    //ssize_t bytesSent=send(sock,msg_buffer.c_str(),msg_buffer.length(),0);
-    //if(bytesSent<msg_buffer.length()){
-    //    perror("Failed to send complete message\n");
-    //    exit(1);
-    //}
 }
 
 //Sends a packet to the data-link layer
@@ -186,8 +184,8 @@ int to_data_link(packet *p, int toDL, int fromDL, int sigFromDL){
     while(dlStatus=='0'){
         read(sigFromDL, &dlStatus, 1);
     }
-    write(toDL, p, sizeof(packet));
-    cout << "\nSENT TO DL\n";
+    ssize_t bytesSent=write(toDL, p, sizeof(packet));
+    cout << "SENT " << bytesSent << " bytes TO DL which should equal " << PACKET_SIZE << "\n";
     //}
     //else{
        // cerr << "data link is out of sync";
@@ -204,7 +202,7 @@ string messageFromDL(int fromDL){
     int packetNum=0;
     int bytesRec=0;
     int bytesTotal=0;
-    while(packetNum<1){
+    //while(packetNum<1){
         while((bytesRec=read(fromDL,&buffer,1)>0)){
             bytesTotal+=bytesRec;
             if(packetNum==0 && buffer!=START_DELIM){
@@ -218,9 +216,10 @@ string messageFromDL(int fromDL){
             }
             else if(buffer!=START_DELIM)
                 message+=buffer;
+            cout << "BYTE RECEIVED FROM DL\n";
             packetNum++;
         }
-    }
+    //}
     
     if(errno!=0){
         cout << "errno set! -- " << errno << " with error:" << strerror(errno) << endl;

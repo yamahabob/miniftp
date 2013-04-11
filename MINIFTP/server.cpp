@@ -89,7 +89,7 @@ int main(int argc, char **argv){
 #endif
                 close(toDL[1]);
                 close(fromDL[0]);
-                //write(fromDL[1],"ShelloE",7);
+                close(signalFromDL[0]);
                 protocol5(client_sock); //?
                 exit(0);
             }
@@ -99,7 +99,9 @@ int main(int argc, char **argv){
 #endif
                 close(toDL[0]);
                 close(fromDL[1]);
+                close(signalFromDL[1]);
                 close(sock);
+                close(client_sock);
                 //int returnStatus=processClient(client_sock); // shouldn't have a socket anymore because DL does all transfers
                 int returnStatus=processClient();
                 wait(&pidDL); // HOW DOES DL KNOW TO DIE?
@@ -144,6 +146,7 @@ int processClient(){
 //        exit(1);
 //    }
     
+    cout << "APPLICATION LAYER CALLING MESSAGE FROM DL\n";
     string messageReceived=messageFromDL(fromDL[0]);
     //exit(1);
     cout << "!!!Message received from DL in Server app--" << messageReceived << endl;
@@ -170,12 +173,14 @@ int processClient(){
         //}
         
         vector<string> empty;
+        cout << "APPLICATION LAYER SENDING OK\n";
         sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
-        
+        cout << "APPLICATION LAYER RETURNED FROM SENDING OK\n";
         
         while(1){ // until logout
             // receive next command from client
             string line;
+            cout << "APPLICATION LAYER WAITING TO RECEIVE COMMAND\n";
             receiveCommand(line, sock);
                         
             string cmd;
