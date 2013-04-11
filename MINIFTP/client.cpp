@@ -10,6 +10,10 @@
 // so it knows to look here when linking occurs
 int toDL[2];
 int fromDL[2];
+int signalFromDL[2];
+int errorRate=-1;
+
+
 
 string activeUser="";
 
@@ -19,11 +23,14 @@ int main(int argc, char **argv){
     checkCommandLine(argc,argv);
     int serverSock=connectToServer();
     int exit_status=0;
+    srand((int)time(NULL));
+    
     //while(!exit_status){
     if(1){
         // data link fork/pipes are created
         pipe(toDL);
         pipe(fromDL);
+        pipe(signalFromDL);
         int pid;
         if((pid=fork())==0){
 #ifdef DEBUG
@@ -31,6 +38,7 @@ int main(int argc, char **argv){
 #endif
             close(toDL[1]);
             close(fromDL[0]);
+            close(signalFromDL[0]);
             protocol5(serverSock);
 #ifdef DEBUG
             cout << "Closing DL\n";
@@ -40,6 +48,7 @@ int main(int argc, char **argv){
         else if(pid>0){
             close(toDL[0]);
             close(fromDL[1]);
+            close(signalFromDL[1]);
             if(login(serverSock)==1){
                 exit_status=processCommands(toDL[1],serverSock); // if just logout->exit=0, if logout_exit->exit=1
                 // collect?
@@ -59,12 +68,26 @@ int main(int argc, char **argv){
 void checkCommandLine(int argc, char **argv){
     if(argc==1)
         serverAddress="127.0.0.1";
-    else if(argc==2){
-        serverAddress=string(argv[1]);
+    else if(argc>1){
+        if(strcmp(argv[1],"-a")==0 && argc>=3){
+            serverAddress=string(argv[1]);
+            if(argc>=5 && strcmp(argv[3],"-e")==0){
+                errorRate=atoi(argv[4]);
+            }
+        }
+        else if(strcmp(argv[1],"-e")==0 && argc>=3){
+            errorRate=atoi(argv[2]);
+        }
+        else{
+            fprintf(stderr,"Usage: ./client -a [serverAddress] -e [error]\n");
+            exit(1);
+        }
     }
     else{
-        fprintf(stderr,"Usage: ./client [serverAddress]\n");
+        fprintf(stderr,"Usage: ./client [serverAddress] -r [error]\n");
+        exit(1);
     }
+    //cout << "Error rate=" << errorRate << endl;
 }
 
 // Setup socket to server or DIE
@@ -122,7 +145,7 @@ int login(int sock){
     cout << "LOGIN USER/PASS=" << username << "/" << password << endl;
 #endif
     
-    sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0]); // send login message to server
+    sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
 
     //sleep(30);
     
@@ -237,7 +260,7 @@ int put(vector<string> arguments, int sock){
         return 0;
     }
     
-    sendMessage(MSG_PUT, arguments, toDL[1], fromDL[0]);
+    sendMessage(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     
     //string response=receiveResponse(sock);
     string response=messageFromDL(fromDL[0]);
@@ -248,8 +271,9 @@ int put(vector<string> arguments, int sock){
     
     if(atoi(cmd.c_str())==MSG_OK){
         cout << "Received OK. Sending data....\n";
-        sendData(MSG_DATA, arguments, sock);
+        //sendData(MSG_DATA, arguments, sock);
         //send file
+        sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     }
     else{
         // discover error, print message
@@ -266,7 +290,7 @@ int get(vector<string> arguments, int sock){
         return 0;
     }
     
-    sendMessage(MSG_GET, arguments, toDL[1], fromDL[0]);
+    //sendMessage(MSG_GET, arguments, toDL[1], fromDL[0]);
     string response=receiveResponse(sock);
     
     string cmd;
@@ -275,7 +299,7 @@ int get(vector<string> arguments, int sock){
     
     if(atoi(cmd.c_str())==MSG_OK){
         cout << "Received OK. Sending data....\n";
-        receiveData(arguments, sock);
+        //receiveData(arguments, sock,fromDL[0]);
         //send file
     }
     else{

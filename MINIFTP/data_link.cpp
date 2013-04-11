@@ -20,7 +20,7 @@ static bool between(seq_nr a, seq_nr b, seq_nr c){
         return(false);
 }
 
-static void send_data(seq_nr frame_nr, seq_nr frame_expected, frame buffer[], int sock){
+static void send_data(seq_nr frame_nr, frame buffer[], int sock){
     /* Construct and send a data frame. */
     frame s; /* scratch variable */
     //s.info = buffer[frame_nr]; /* insert packet into frame */
@@ -31,6 +31,7 @@ static void send_data(seq_nr frame_nr, seq_nr frame_expected, frame buffer[], in
     //cout << "frame info being send=" << s.info << endl;
     s.kind=data;
     s.seq = frame_nr; /* insert sequence number into frame */
+    //s.remaining=remaining;
 
     char result[CHECK_SUM_LENGTH];
     checksum(s.info, PAYLOAD_SIZE, result);
@@ -46,14 +47,18 @@ static void send_data(seq_nr frame_nr, seq_nr frame_expected, frame buffer[], in
 void protocol5(int sock){ // removed network_fd because it's now global
     seq_nr next_frame_to_send; /* MAX SEQ > 1; used for outbound stream */
     //pipe
+    
+    vector<frame> partialPacket;
+    
     seq_nr ack_expected; /* oldest frame as yet unacknowledged */
     seq_nr frame_expected; /* next frame expected on inbound stream */
     frame r; /* scratch variable */
     //packet buffer[MAX_SEQ + 1]; /* buffers for the outbound stream */
     frame buffer[MAX_SEQ + 1]; /* buffers for the outbound stream */
-    frame reserved[MAX_FRAME_SPLIT - 1]; /* buffers for the outbound stream */
+    //frame reserved[MAX_FRAME_SPLIT - 1]; /* buffers for the outbound stream */
+    vector<frame> reserved;
     seq_nr nbuffered; /* number of output buffers currently in use */
-    seq_nr nReserveredbuffer;
+    //seq_nr nbufferedReserve;
     seq_nr i; /* used to index into the buffer array */
     event_type event;
     enable_network_layer(); /* allow network layer ready events */
@@ -61,7 +66,7 @@ void protocol5(int sock){ // removed network_fd because it's now global
     next_frame_to_send = 0; /* next frame going out */
     frame_expected = 0; /* number of frame expected inbound */
     nbuffered = 0; /* initially no packets are buffered */
-    nReserveredbuffer=0;
+    //nbufferedReserve=0;
     while (true) {
 #ifdef DEBUG
         cout << "WAITING FOR EVENT IN DL\n";
@@ -75,13 +80,15 @@ void protocol5(int sock){ // removed network_fd because it's now global
             {
                 /* Accept, save, and transmit a new frame. */
                 //from_network_layer(&buffer[next_frame_to_send]); /* fetch new packet */
-                int numFramesCreated=from_network_layer(buffer, next_frame_to_send); /* fetch new packet */
-                for(int i=0;i<numFramesCreated;i++){
+                packet p;
+                from_network_layer(&p); /* fetch new packet */
+                int numFramesAddedtoBuffer=split(&p, buffer, reserved, next_frame_to_send, nbuffered);
+                for(int i=0;i<numFramesAddedtoBuffer;i++){
                     nbuffered = nbuffered + 1; /* expand the sender’s window */
-                    send_data(next_frame_to_send, frame_expected, buffer, sock);/* transmit the frame */
+                    send_data(next_frame_to_send, buffer, sock);/* transmit the frame */
                     inc(next_frame_to_send); /* advance sender’s upper window edge */
-                    
                 }
+                
                 break;
             }
             case frame_arrival: /* a data or control frame has arrived */
@@ -89,15 +96,20 @@ void protocol5(int sock){ // removed network_fd because it's now global
                 if(!checksumFrame(r)){
 #ifdef DEBUG
                     cout << "CHECK SUM ERROR\n";
-                    //int temp;
-                    //cin >> temp;
 #endif 
                     break;
                 }
                 cout << "r.seq=" << r.seq << " r.kind=" << r.kind << endl;
                 if (r.seq == frame_expected && r.kind==data) {
                     /* Frames are accepted only in order. */
-                    to_network_layer(r.info); /* pass packet to network layer */
+                    
+                    //do stuff
+                    partialPacket.push_back(r);
+                    if(r.remaining==0){
+                        to_network_layer(partialPacket); /* pass packet to network layer */
+                        partialPacket.clear();
+                    }
+                    
                     inc(frame_expected); /* advance lower edge of receiver’s window */
                     
                     // SEND ACK FOR THIS FRAME
@@ -127,6 +139,16 @@ void protocol5(int sock){ // removed network_fd because it's now global
                         nbuffered = nbuffered - 1; /* one frame fewer buffered */
                         stop_timer(ack_expected); /* frame arrived intact; stop timer */
                         inc(ack_expected); /* contract sender’s window */
+                        
+                        /* If items in reserved, move to buffer and send */
+                        if(!reserved.empty()){
+                            frame temp=(frame)reserved.front();
+                            memcpy(&buffer[next_frame_to_send],&temp,sizeof(frame));
+                            reserved.erase(reserved.begin());
+                            nbuffered = nbuffered + 1; /* expand the sender’s window */
+                            send_data(next_frame_to_send, buffer, sock);
+                            inc(next_frame_to_send); /* advance sender’s upper window edge */
+                        }
                     }
                 }
                 //int temp;
@@ -137,7 +159,7 @@ void protocol5(int sock){ // removed network_fd because it's now global
                 next_frame_to_send = ack_expected; /* start retransmitting here */
                 //cout << "Retransmitting " << next_frame_to_send << endl;
                 for (i = 1; i <= nbuffered; i++) {
-                    send_data(next_frame_to_send, frame_expected, buffer, sock);/* resend frame */
+                    send_data(next_frame_to_send, buffer, sock);/* resend frame */
                     inc(next_frame_to_send); /* prepare to send the next one */
                 }
                 break;
@@ -236,22 +258,25 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
 
 /* Fetch a packet from the network layer for transmission on the channel */
 //void from_network_layer(packet *p){
-int from_network_layer(frame buffer[], int next_frame_to_send){ /* fetch new packet */
-    char temp[PACKET_SIZE];
-    int bytesRec=(int)read(toDL[0],temp,PACKET_SIZE);
-    strncpy(buffer[next_frame_to_send].info,temp,bytesRec);
-    return 1;
+void from_network_layer(packet *p){ /* fetch new packet */
+    packet temp;
+    int bytesRec=(int)read(toDL[0],&temp,PACKET_SIZE);
+    memcpy(p,&temp,bytesRec);
 
-    cout << "DL read from network layer -- " << temp << endl;
+    cout << "DL read from network layer -- " << temp.data << endl;
 }
 
 /* Deliver information from an inbound frame to the network layer. */
-void to_network_layer(char *f){
-    int bytesSent=(int)write(fromDL[1],f,strlen(f));
-    if(bytesSent<0){
+void to_network_layer(vector<frame> framesToNL){
+    packet p;
+    deStuff(framesToNL,&p);
+    
+    int bytesSent=(int)write(fromDL[1],&p,sizeof(packet));
+    if(bytesSent<sizeof(packet)){
         perror("well, this sucks...");
         exit(1);
     }
+    
 }
 /* Go get an inbound frame from the physical layer and copy it to r. */
 
@@ -341,8 +366,9 @@ void disable_network_layer(void){
 int byteStuff(char *input, char *output){
      int ind = 0; //keeps track of the next position in output.
      
-     for(int i = 0; i <= strlen(input); i++){
-         if(input[i] == '\x10'){ //if the input is DLE
+     for(int i = 0; i < PACKET_SIZE; i++){
+         //if(input[i] == '\x10'){ //if the input is DLE
+         if(input[i] == DELIM){
              output[ind++] = input[i];
              output[ind++] = input[i];
          }
@@ -350,8 +376,35 @@ int byteStuff(char *input, char *output){
              output[ind++] = input[i];
      }
      
-     return ind - 1; //size
+     return ind; //size
  }
+
+void deStuff(vector <frame> partialPackets, packet *p){
+    int ind = 0; //The next position in the packet data
+    bool metDLE = false; //The previously visited character is DLE
+    
+    while(!partialPackets.empty()){
+        frame temp = (frame)partialPackets.front(); //Read the next stuffed frame
+        
+        for(int i = 0; i < PAYLOAD_SIZE; i++){
+            if(ind >= PACKET_SIZE)
+                break;
+            
+            if(temp.info[i] == '\x10'){ //The char is DLE
+                if(metDLE)
+                    p->data[ind++] = temp.info[i];
+                else
+                    metDLE = true;
+            }
+            else{
+                p->data[ind++] = temp.info[i];
+                metDLE = false;
+            }
+        }
+        
+        partialPackets.erase(partialPackets.begin());
+    }
+}
 
 /* Puts two checksum bytes for *input* in *result*. *size* is the size of
  *input*. The function returns 1 on success. If the size of input is less
@@ -376,13 +429,13 @@ int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]){
     return 1;
 }
 
-int splitFrame(char *stuffedPacket, char rawFrames[MAX_FRAME_SPLIT][PAYLOAD_SIZE])
+int fragment(char *stuffedPacket, frame rawFrames[MAX_FRAME_SPLIT], int size)
 {
-    int len = (int)strlen(stuffedPacket);
+    int len = size;
     int i=0;
     for(i=0;i<ceil(((float)len/PAYLOAD_SIZE));i++){
-        int offset=min(PAYLOAD_SIZE,(int)strlen(stuffedPacket+i*PAYLOAD_SIZE));
-        strncpy(rawFrames[i],stuffedPacket+(i*PAYLOAD_SIZE),offset);
+        //int offset=min(PAYLOAD_SIZE,(int)strlen(stuffedPacket+i*PAYLOAD_SIZE));
+        memcpy(rawFrames[i].info,stuffedPacket+(i*PAYLOAD_SIZE),PAYLOAD_SIZE);
     }
     return i;
 }
@@ -405,5 +458,34 @@ int checksumFrame(frame f){
         return 0;
 }
 
+// returns number of frames created
+// always assumes reserve is empty, otherwise no packet would have been received from network layer
+int split(packet *p, frame buffer[], vector<frame> & reserved, int next_frame_to_send, seq_nr nbuffered){
+    char output[2*PACKET_SIZE+1];
+    frame rawFrames[MAX_FRAME_SPLIT];
+    
+    memset(output,'\0',2*PACKET_SIZE+1);
+    int size=byteStuff(p->data,output);
+    int numFramesCreated=fragment(output,rawFrames,size);
+    int framesAddedtoBuffer=0;
+    //*nbufferedReserve=0;
+    
+    for(int i=0;i<numFramesCreated;i++){
+        if(nbuffered<MAX_SEQ){
+            memcpy(buffer[next_frame_to_send].info,rawFrames[i].info,PAYLOAD_SIZE);
+            buffer[next_frame_to_send].remaining=numFramesCreated-i-1;
+            nbuffered++;
+            framesAddedtoBuffer++;
+        }
+        else{
+            //memcpy(reserve[*nbufferedReserve].info,rawFrames[i].info,PAYLOAD_SIZE);
+            //(*nbufferedReserve)++;
+            rawFrames[i].remaining=numFramesCreated-i-1;
+            reserved.push_back(rawFrames[i]);
+        }
+    }
+    
+    return framesAddedtoBuffer;
+}
 
 

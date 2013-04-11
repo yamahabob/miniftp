@@ -23,6 +23,7 @@ typedef struct{
     seq_nr ack;
     char info[PAYLOAD_SIZE];
     char checkSum[2];
+    int remaining;
 } frame;
 
 extern int toDL[2];
@@ -36,9 +37,9 @@ extern int errorRate;
 /* Wait for an event to happen; return its type in event */
 void wait_for_event(event_type *event, int sock);
 /* Fetch a packet from the network layer for transmission on the channel */
-int from_network_layer(frame f[], int);
+void from_network_layer(packet *p);
 /* Deliver information from an inbound frame to the network layer. */
-void to_network_layer(char *p);
+void to_network_layer(vector<frame> framesToNL);
 /* Go get an inbound frame from the physical layer and copy it to r. */
 void from_physical_layer(frame *r, int sock);
 /* Pass the frame to the physical layer for transmission. */
@@ -61,9 +62,12 @@ void disable_network_layer(void);
 void protocol5(int sock); //removed network_fd see .cpp file
 static bool between(seq_nr a, seq_nr b, seq_nr c);
 int byteStuff(char *input, char *output);
+void deStuff(vector <frame> partialPackets, packet *p);
 int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]);
 int makeFrame(packet packetData, frame framesArr[MAX_FRAME_SPLIT]);
 void bzzzzzzzuppp(frame *f);
 int checksumFrame(frame f);
+int fragment(char *stuffedPacket, frame rawFrames[MAX_FRAME_SPLIT], int size);
+int split(packet *p, frame buffer[], vector<frame> & reserved, int next_frame_to_send, seq_nr nbuffered);
 
-#endif 
+#endif

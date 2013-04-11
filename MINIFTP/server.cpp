@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <errno.h>
+#include <openssl/sha.h>
 
 #include "header.h"
 #include "server.h"
@@ -233,6 +234,7 @@ int processClient(){
     }
     else{
         //send failed
+        //Do we need to return 0 to the client and then exit(1) here?
         return 0;
     }
     
@@ -312,3 +314,56 @@ int serverSetup(){
 
 }
 
+/*
+int verifyClient(int cmd, vector<string> userCredentials){
+    
+    string username=userCredentials[0];
+    string password=userCredentials[1];
+    
+    string returnedHash=getUserHash(username);
+    if(returnedHash==""){
+        return 0;
+    }
+    else{
+        string providedHash;//=sha256(password);
+        if(returnedHash==providedHash) return 1;
+        else return 0;
+    }
+    
+    return 1;
+    
+}
+
+string getUserHash(string username){
+	ifstream passwd("shadow", ios::in);
+	if(!passwd.is_open()){ cout << "Error: can't open shadow file\n"; exit(1);}
+    
+	string line;
+	while(passwd>>line){
+		string delimiters = ":";
+		size_t current=0;
+		size_t next =-1;
+		next=line.find_first_of(delimiters,current);
+		string temp=line.substr(current,next-current);
+		if(temp==username)
+			return line.substr(next-current+1,line.length());
+        
+	}
+	return "";
+}
+
+void sha256(char *string, char outputBuffer[65])
+{
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, string, strlen(string));
+    SHA256_Final(hash, &sha256);
+    int i = 0;
+    for(i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
+        sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
+    }
+    outputBuffer[64] = 0;
+}
+*/
