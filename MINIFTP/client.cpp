@@ -36,9 +36,9 @@ int main(int argc, char **argv){
 #ifdef DEBUG
             cout << "Starting DL\n";
 #endif
-            close(toDL[1]);
-            close(fromDL[0]);
-            close(signalFromDL[0]);
+            //close(toDL[1]);
+            //close(fromDL[0]);
+            //close(signalFromDL[0]);
             protocol5(serverSock);
 #ifdef DEBUG
             cout << "Closing DL\n";
@@ -46,10 +46,10 @@ int main(int argc, char **argv){
             exit(0);
         }
         else if(pid>0){
-            close(toDL[0]);
-            close(fromDL[1]);
-            close(signalFromDL[1]);
-            close(serverSock); // close communicating socket
+            //close(toDL[0]);
+            //close(fromDL[1]);
+            //close(signalFromDL[1]);
+            //close(serverSock); // close communicating socket
             if(login()==1){
                 exit_status=processCommands(toDL[1]); // if just logout->exit=0, if logout_exit->exit=1
                 // collect?
@@ -145,6 +145,17 @@ int login(){
     cout << "LOGIN USER/PASS=" << username << "/" << password << endl;
 #endif
     
+    vector<string> empty;
+    int count=10;
+    while(count-- > 0){
+        cout << "IN WHILE\n";
+        sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
+        //string messageReceived=messageFromDL(fromDL[0]);
+        cout << "SLEEPING\n";
+        sleep(10);
+    }
+    exit(1);
+    
     sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
 
     //sleep(30);
@@ -160,8 +171,8 @@ int login(){
     
     
     cout << "RESPONSE=" << cmd << endl;
-    int temp;
-    cin >> temp;
+    //int temp;
+    //cin >> temp;
     
     //replace this with conversion function
     if(atoi(cmd.c_str())==MSG_OK)
@@ -199,7 +210,7 @@ int processCommands(int dl_fd){
         }
         else if(strcasecmp(cmd.c_str(),"put")==0){
             
-            int retVal=0;//=put(arguments, sock);
+            int retVal=put(arguments);
             if(retVal==0)
                 cout << "Failed to transmit file\n";
             else
@@ -254,7 +265,7 @@ int checkNumArguments(int cmd, vector<string> arguments){
     return 1;
 }
 
-int put(vector<string> arguments, int sock){
+int put(vector<string> arguments){
     ifstream fin;
     fin.open(arguments[0],ios::in);
     if(!fin.is_open()){
@@ -262,8 +273,10 @@ int put(vector<string> arguments, int sock){
         return 0;
     }
     
+    cout << "Sending put command to server\n";
     sendMessage(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
-    
+    cout << "Received answer to put command to server\n";
+
     //string response=receiveResponse(sock);
     string response=messageFromDL(fromDL[0]);
 
@@ -275,6 +288,8 @@ int put(vector<string> arguments, int sock){
         cout << "Received OK. Sending data....\n";
         //sendData(MSG_DATA, arguments, sock);
         //send file
+        int temp;
+        cin >> temp;
         sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     }
     else{
@@ -284,7 +299,7 @@ int put(vector<string> arguments, int sock){
     return 1;
 }
 
-int get(vector<string> arguments, int sock){
+int get(vector<string> arguments){
     ofstream fout;
     fout.open(arguments[0],ios::out);
     if(!fout.is_open()){
@@ -293,7 +308,7 @@ int get(vector<string> arguments, int sock){
     }
     
     //sendMessage(MSG_GET, arguments, toDL[1], fromDL[0]);
-    string response=receiveResponse(sock);
+    string response;//#=receiveResponse(sock);
     
     string cmd;
     vector<string> args;

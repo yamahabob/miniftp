@@ -51,6 +51,8 @@ typedef unsigned int seq_nr;
 #define MSG_ERROR 22
 
 struct packet{
+    int type;
+    int dataSize;
     char data[PACKET_SIZE]; //tan has this as unsigned char[]
 };
 

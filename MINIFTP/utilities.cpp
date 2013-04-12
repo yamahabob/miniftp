@@ -69,15 +69,6 @@ int sendData(int cmd, vector<string> parameters, int toDL, int fromDL, int signa
             bytesRead++; // to ensure correct # bytes sent
             
         }
-        
-        // will be replaced with to_data_link()
-        //ssize_t bytesSent=send(sock,msg_buffer.data,bytesRead,0);
-        //if(bytesSent<bytesRead){
-        //   perror("Failed to send complete message in sendServerData\n");
-        //    exit(1);
-        //}else
-        
-        //NO MECHANISM FOR LIMITING DATA TO DL
         to_data_link(&msg_buffer, toDL, fromDL, signalFromDL);
         packetNum++;
     }
@@ -144,23 +135,23 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int s
     cout << "msg_buffer=\"" <<msg_buffer << "\" with size " << msg_buffer.length() << "\n";
 
     
-    unsigned long i = 0;
-    
-    //Break the message into packets and send each packet individually to the
-    //data-link process.
-    while(i < msg_buffer.length()){
-        cout << "MSG LEN from NL=" << i << endl;
-        //unsigned long len = msg_buffer.length() - i > PACKET_SIZE ?
-        //msg_buffer.length() - i :
-        //    PACKET_SIZE;
-        unsigned long len=PACKET_SIZE;
-        string data = msg_buffer.substr(i, len);
-        packet pack;
-        //strcpy(pack.data, data.c_str());
-        memcpy(pack.data, data.c_str(),len);
-        to_data_link(&pack, toDL, fromDL, signalFromDL);
-        i+=len;
-    }
+//    unsigned long i = 0;
+//    
+//    //Break the message into packets and send each packet individually to the
+//    //data-link process.
+//    while(i < msg_buffer.length()){
+//        //unsigned long len = msg_buffer.length() - i > PACKET_SIZE ?
+//        //msg_buffer.length() - i :
+//        //    PACKET_SIZE;
+//        unsigned long len=PACKET_SIZE;
+//        string data = msg_buffer.substr(i, len);
+//        packet pack;
+//        //strcpy(pack.data, data.c_str());
+//        memcpy(pack.data, data.c_str(),len);
+//        to_data_link(&pack, toDL, fromDL, signalFromDL);
+//        i+=len;
+//        cout << "MSG LEN from NL=" << i << endl;
+//    }
 }
 
 //Sends a packet to the data-link layer
@@ -168,24 +159,16 @@ int to_data_link(packet *p, int toDL, int fromDL, int sigFromDL){
     //char buff[3];
     
     //We assume that it waits until a message comes from data-link:
-#ifdef DEBUG
-    cout <<"Checking if DL is OK" << endl;
-#endif
-    //read(fromDL, buff, 3);
-#ifdef DEBUG
-    //cout <<"DL returned -- " << buff << endl;
-#endif
-    
-    
-    //if(strcmp(buff, "OK")){
-        //write(toDL, p->data, strlen(p->data));
-    
-    char dlStatus='0';
-    while(dlStatus=='0'){
-        read(sigFromDL, &dlStatus, 1);
-    }
-    ssize_t bytesSent=write(toDL, p, sizeof(packet));
-    cout << "SENT " << bytesSent << " bytes TO DL which should equal " << PACKET_SIZE << "\n";
+    char dlStatus;
+    //while(dlStatus=='0'){
+    cout << "CHECKING TOKEN-->\n";
+    read(sigFromDL, &dlStatus, 1);
+    cout << "TOKEN RECEIVED-->\n";
+
+    //}
+    //ssize_t bytesSent=
+    write(toDL, p, sizeof(packet));
+    //cout << "SENT " << bytesSent << " bytes TO DL which should equal " << PACKET_SIZE << "\n";
     //}
     //else{
        // cerr << "data link is out of sync";
@@ -199,6 +182,7 @@ string messageFromDL(int fromDL){
 #endif
     string message;
     char buffer;
+    
     int packetNum=0;
     int bytesRec=0;
     int bytesTotal=0;
@@ -232,7 +216,9 @@ string messageFromDL(int fromDL){
 }
 
 
-
+void splitMessage(){
+    
+}
 
 
 

@@ -10,7 +10,7 @@ int serverSocket;
 
 // Commands
 int login();
-int put(vector<string> arguments, int sock);
-int get(vector<string> arguments, int sock);
+int put(vector<string> arguments);
+int get(vector<string> arguments);
 
 #endif

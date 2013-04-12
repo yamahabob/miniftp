@@ -87,9 +87,9 @@ int main(int argc, char **argv){
                 //cout << "read from pipe "<< buffer<<endl;
                 //cout << "done reading from pipe\n";
 #endif
-                close(toDL[1]);
-                close(fromDL[0]);
-                close(signalFromDL[0]);
+                //close(toDL[1]);
+                //close(fromDL[0]);
+                //close(signalFromDL[0]);
                 protocol5(client_sock); //?
                 exit(0);
             }
@@ -97,11 +97,11 @@ int main(int argc, char **argv){
 #ifdef DEBUG
                 cout << "Processing client started\n";
 #endif
-                close(toDL[0]);
-                close(fromDL[1]);
-                close(signalFromDL[1]);
-                close(sock);
-                close(client_sock);
+                //close(toDL[0]);
+                //close(fromDL[1]);
+                //close(signalFromDL[1]);
+                //close(sock);
+                //close(client_sock);
                 //int returnStatus=processClient(client_sock); // shouldn't have a socket anymore because DL does all transfers
                 int returnStatus=processClient();
                 wait(&pidDL); // HOW DOES DL KNOW TO DIE?
@@ -118,7 +118,7 @@ int main(int argc, char **argv){
         else if(pid>0){ // parent
             // do nothing for now
             cout <<"Parent do nothing\n";
-            close(client_sock);
+            //close(client_sock);
         }
         else{ // fork failed
             perror("OMG FORK FAILED FOR CLIENT");
@@ -145,6 +145,18 @@ int processClient(){
 //        cout<<"strerrno=" <<errno << endl;
 //        exit(1);
 //    }
+    vector<string> empty;
+
+    int count=10;
+    while(count-- > 0){
+        cout << "IN WHILE\n";
+        string messageReceived=messageFromDL(fromDL[0]);
+        cout << "SLEEPING\n";
+        sleep(10);
+        //sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
+    }
+    exit(1);
+
     
     cout << "APPLICATION LAYER CALLING MESSAGE FROM DL\n";
     string messageReceived=messageFromDL(fromDL[0]);
@@ -186,7 +198,7 @@ int processClient(){
             string cmd;
             vector<string> arguments;
             parseMessage(line.c_str(), cmd, arguments);
-            
+            cout << "PARSED MESSAGE CMD=" << cmd <<endl;
            // logout
            if(strcasecmp(cmd.c_str(),"1")==0){
                 activeUser="";
@@ -202,6 +214,7 @@ int processClient(){
 //                    perror("Sending to client:");
 //                    exit(1);
 //                }
+                cout << "RECEIVED PUT COMMAND: sending OK\n";
                 sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
                 //int retVal=receiveData(arguments, sock);
                 int retVal=receiveData(arguments, sock,fromDL[0]);
