@@ -22,8 +22,8 @@ using namespace std;
 
 const string PORT="7766"; // unused port
 const char DELIM=' ';
-const char START_DELIM='S';
-const char END_DELIM='E';
+//const char START_DELIM='S';
+//const char END_DELIM='E';
 
 typedef unsigned int seq_nr;
 

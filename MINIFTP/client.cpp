@@ -19,7 +19,7 @@ string activeUser="";
 
 // runs the program
 int main(int argc, char **argv){
-    
+    cout << "SIZEOF(PACKET)=" << sizeof(packet) <<endl;
     checkCommandLine(argc,argv);
     int serverSock=connectToServer();
     int exit_status=0;
@@ -146,19 +146,8 @@ int login(){
 #endif
     
     vector<string> empty;
-    int count=10;
-    while(count-- > 0){
-        cout << "IN WHILE\n";
-        sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
-        //string messageReceived=messageFromDL(fromDL[0]);
-        cout << "SLEEPING\n";
-        sleep(10);
-    }
-    exit(1);
-    
-    sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
 
-    //sleep(30);
+    sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
     
     //string response=receiveResponse(sock);
     string response=messageFromDL(fromDL[0]);
@@ -286,10 +275,7 @@ int put(vector<string> arguments){
     
     if(atoi(cmd.c_str())==MSG_OK){
         cout << "Received OK. Sending data....\n";
-        //sendData(MSG_DATA, arguments, sock);
         //send file
-        int temp;
-        cin >> temp;
         sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     }
     else{

@@ -133,8 +133,8 @@ int processClient(){
     // "global" activeUser
     string activeUser;
     
-    char msg[BUFFER_SIZE];
-    memset(msg,0,BUFFER_SIZE);
+    //char msg[BUFFER_SIZE];
+    //memset(msg,0,BUFFER_SIZE);
     //size_t bytesRec=recv(sock,msg,BUFFER_SIZE,0);
 //    msg[bytesRec]='\0';
 //#ifdef DEBUG
@@ -147,27 +147,14 @@ int processClient(){
 //    }
     vector<string> empty;
 
-    int count=10;
-    while(count-- > 0){
-        cout << "IN WHILE\n";
-        string messageReceived=messageFromDL(fromDL[0]);
-        cout << "SLEEPING\n";
-        sleep(10);
-        //sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
-    }
-    exit(1);
-
-    
     cout << "APPLICATION LAYER CALLING MESSAGE FROM DL\n";
     string messageReceived=messageFromDL(fromDL[0]);
-    //exit(1);
     cout << "!!!Message received from DL in Server app--" << messageReceived << endl;
-    //cout << "Pausing Server APP. if continued, things will break";
-    
+        
     // LOGIN
     string cmd="";
     vector<string> arguments;
-    parseMessage(msg, cmd, arguments);
+    parseMessage(messageReceived.c_str(), cmd, arguments);
     
     
     
@@ -217,7 +204,7 @@ int processClient(){
                 cout << "RECEIVED PUT COMMAND: sending OK\n";
                 sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
                 //int retVal=receiveData(arguments, sock);
-                int retVal=receiveData(arguments, sock,fromDL[0]);
+                int retVal=receiveData(arguments,fromDL[0]);
                 
                 if(retVal==0)
                     cout << "Failed to received file\n";

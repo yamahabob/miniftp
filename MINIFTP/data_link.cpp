@@ -380,36 +380,45 @@ void disable_network_layer(void){
 /* Applies byte stuffinfg on *input* and puts the result in *output*. The
  function also returns the size of *output*, i.e. the stuffed buffer. */
 int byteStuff(char *input, char *output){
-     int ind = 0; //keeps track of the next position in output.
-     
-     for(int i = 0; i < PACKET_DATA_SIZE; i++){
-         //if(input[i] == '\x10'){ //if the input is DLE
-         if(input[i] == DELIM){
-             output[ind++] = input[i];
-             output[ind++] = input[i];
-         }
-         else
-             output[ind++] = input[i];
-     }
-     
-     return ind; //size
- }
+    int ind = 0; //keeps track of the next position in output.
+    cout << "INPUT BUFFER=\""<< input << "\"\n";
+    cout << "STUFFED PACKET =\"";
+    for(int i = 0; i < PACKET_SIZE; i++){
+        //if(input[i] == '\x10'){ //if the input is DLE
+        if(input[i] == DELIM){
+            output[ind++] = input[i];
+            output[ind++] = input[i];
+            cout << output[ind-2];
+            cout << output[ind-1];
+        }
+        else{
+            output[ind++] = input[i];
+            cout << output[ind-1];
+        }
+    }
+    cout << "\""<<endl;
+    //cout << "STUFFED PACKET =\"" << output << "\"\n" <<endl;
+    return ind; //size
+}
 
 void deStuff(vector <frame> partialPackets, packet *p){
     char pack_buf[PACKET_SIZE];
     int ind = 0; //The next position in the packet data
     bool metDLE = false; //The previously visited character is DLE
     
+    cout << "NUMBER OF FRAMES IN PACKETS=" << partialPackets.size() <<endl;
+    
     while(!partialPackets.empty()){
         frame temp = (frame)partialPackets.front(); //Read the next stuffed frame
-        
-        for(int i = 0; i < PAYLOAD_SIZE; i++){
-            if(ind >= PACKET_DATA_SIZE)
-                break;
-            
-            //if(temp.info[i] == '\x10'){ //The char is DLE
-            if(temp.info[i] == DELIM){ //The char is DLE
+        char thing[PAYLOAD_SIZE+1];
+        memcpy(thing,temp.info,PAYLOAD_SIZE);
+        thing[PAYLOAD_SIZE]='\0';
+        cout << "Data in frame being destuffed=" << thing << endl;
 
+        for(int i = 0; i < PAYLOAD_SIZE; i++){
+            if(ind >= PACKET_SIZE)
+                break;
+            if(temp.info[i] == DELIM){ //The char is DLE
                 if(metDLE)
                     pack_buf[ind++] = temp.info[i];
                 else
