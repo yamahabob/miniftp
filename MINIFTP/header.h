@@ -31,6 +31,7 @@ typedef unsigned int seq_nr;
 #define BUFFER_SIZE 100
 #define PAYLOAD_SIZE 100
 #define PACKET_SIZE 192
+#define PACKET_DATA_SIZE 184
 #define MAX_MESSAGE_LEN 190 // need to put in design report
 #define FRAME_TIMEOUT 5
 
@@ -51,9 +52,9 @@ typedef unsigned int seq_nr;
 #define MSG_ERROR 22
 
 struct packet{
-    int type;
     int dataSize;
-    char data[PACKET_SIZE]; //tan has this as unsigned char[]
+    int last; //1 if the packet is the last packet of a message or a file
+    char data[PACKET_DATA_SIZE]; //tan has this as unsigned char[]
 };
 
 void parseMessage(const char* msg, string & command, vector<string> & arguments);

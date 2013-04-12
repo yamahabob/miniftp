@@ -41,35 +41,38 @@ int sendData(int cmd, vector<string> parameters, int toDL, int fromDL, int signa
     }
     
     //char msg_buffer[PACKET_SIZE];
-    packet msg_buffer;
-    //char temp_msg_buffer[PACKET_SIZE];
-    packet temp_msg_buffer;
+    packet pack;
+    
     int packetNum=0;
     while(!fin.eof()){
-        memset(msg_buffer.data,'\0',PACKET_SIZE); // null ensures strlen works
-        memset(temp_msg_buffer.data,'\0',PACKET_SIZE); // null ensures strlen works
+        memset(pack.data,'\0',PACKET_DATA_SIZE); // null ensures strlen works
         
-        fin.read(temp_msg_buffer.data,PACKET_SIZE-2); // worst case, only 1 packet and it will
+        //fin.read(temp_msg_buffer.data,PACKET_SIZE-2); // worst case, only 1 packet and it will
+        fin.read(pack.data,PACKET_DATA_SIZE);
+        
         // need both start and end DELIM
         int bytesRead=(int)fin.gcount(); // originally a long casted to int
+        pack.dataSize = bytesRead;
+        pack.last = 0;
+        
         // returns the number of bytes read
         
         // if first packet of "message", needs start delim
-        if(packetNum==0){
-            memcpy(msg_buffer.data,&START_DELIM,sizeof(START_DELIM));
-            bytesRead++; // to ensure correct # bytes sent
-        }
-        
-        // regardless of which packet, copy bytes into packet
-        memcpy(msg_buffer.data+strlen(msg_buffer.data), temp_msg_buffer.data, strlen(temp_msg_buffer.data));
+//        if(packetNum==0){
+//            memcpy(msg_buffer.data,&START_DELIM,sizeof(START_DELIM));
+//            bytesRead++; // to ensure correct # bytes sent
+//        }
         
         // lastly, if we are at end of the file, we are ending the message
-        if(fin.eof()){
-            memcpy(msg_buffer.data+strlen(msg_buffer.data),&END_DELIM,sizeof(END_DELIM));
-            bytesRead++; // to ensure correct # bytes sent
+//        if(fin.eof()){
+//            memcpy(msg_buffer.data+strlen(msg_buffer.data),&END_DELIM,sizeof(END_DELIM));
+//            bytesRead++; // to ensure correct # bytes sent
+//            
+//        }
+        if(fin.eof())
+            pack.last = 1;
             
-        }
-        to_data_link(&msg_buffer, toDL, fromDL, signalFromDL);
+        to_data_link(&pack, toDL, fromDL, signalFromDL);
         packetNum++;
     }
     return 1;
@@ -126,6 +129,8 @@ int receiveData(vector<string> arguments, int sock, int fromDL){
 }
 
 // Sends a string to server - separated by DLE byte
+// This function assumes that the size of a message is never greater than 184
+//bytes, which fits into one packet.
 void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int signalFromDL){
     string msg_buffer= START_DELIM + to_string(cmd);
     for(int i=0;i<parameters.size();i++){
@@ -134,6 +139,12 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int s
     msg_buffer += END_DELIM;
     cout << "msg_buffer=\"" <<msg_buffer << "\" with size " << msg_buffer.length() << "\n";
 
+    packet pack;
+    //strcpy(pack.data, data.c_str());
+    memcpy(pack.data, msg_buffer.c_str(), PACKET_DATA_SIZE);
+    pack.dataSize = (int)msg_buffer.length();
+    pack.last = 1;
+    to_data_link(&pack, toDL, fromDL, signalFromDL);
     
 //    unsigned long i = 0;
 //    
@@ -213,11 +224,6 @@ string messageFromDL(int fromDL){
     cout <<"Message being returned from DL="<< message<< " -- Total rec bytes=" << bytesTotal << endl;
 #endif
     return message;
-}
-
-
-void splitMessage(){
-    
 }
 
 

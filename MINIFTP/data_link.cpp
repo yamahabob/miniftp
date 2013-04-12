@@ -49,7 +49,7 @@ void protocol5(int sock){ // removed network_fd because it's now global
     seq_nr next_frame_to_send; /* MAX SEQ > 1; used for outbound stream */
     //pipe
     
-    vector<frame> partialPacket;
+    vector<frame> partialPacket; //stores fragmented frames of a packet
     
     seq_nr ack_expected; /* oldest frame as yet unacknowledged */
     seq_nr frame_expected; /* next frame expected on inbound stream */
@@ -382,7 +382,7 @@ void disable_network_layer(void){
 int byteStuff(char *input, char *output){
      int ind = 0; //keeps track of the next position in output.
      
-     for(int i = 0; i < PACKET_SIZE; i++){
+     for(int i = 0; i < PACKET_DATA_SIZE; i++){
          //if(input[i] == '\x10'){ //if the input is DLE
          if(input[i] == DELIM){
              output[ind++] = input[i];
@@ -396,6 +396,7 @@ int byteStuff(char *input, char *output){
  }
 
 void deStuff(vector <frame> partialPackets, packet *p){
+    char pack_buf[PACKET_SIZE];
     int ind = 0; //The next position in the packet data
     bool metDLE = false; //The previously visited character is DLE
     
@@ -403,25 +404,27 @@ void deStuff(vector <frame> partialPackets, packet *p){
         frame temp = (frame)partialPackets.front(); //Read the next stuffed frame
         
         for(int i = 0; i < PAYLOAD_SIZE; i++){
-            if(ind >= PACKET_SIZE)
+            if(ind >= PACKET_DATA_SIZE)
                 break;
             
             //if(temp.info[i] == '\x10'){ //The char is DLE
             if(temp.info[i] == DELIM){ //The char is DLE
 
                 if(metDLE)
-                    p->data[ind++] = temp.info[i];
+                    pack_buf[ind++] = temp.info[i];
                 else
                     metDLE = true;
             }
             else{
-                p->data[ind++] = temp.info[i];
+                pack_buf[ind++] = temp.info[i];
                 metDLE = false;
             }
         }
         
         partialPackets.erase(partialPackets.begin());
     }
+    
+    memcpy(p, pack_buf, PACKET_SIZE);
 }
 
 /* Puts two checksum bytes for *input* in *result*. *size* is the size of
@@ -478,11 +481,17 @@ int checksumFrame(frame f){
 // returns number of frames created
 // always assumes reserve is empty, otherwise no packet would have been received from network layer
 int split(packet *p, frame buffer[], vector<frame> & reserved, int next_frame_to_send, seq_nr nbuffered){
-    char output[2*PACKET_SIZE+1];
+    char output[2*PACKET_SIZE];
+    char pack_buf[PACKET_SIZE];
+    
     frame rawFrames[MAX_FRAME_SPLIT];
     
-    memset(output,'\0',2*PACKET_SIZE+1);
-    int size=byteStuff(p->data,output);
+    memset(output,'\0',2*PACKET_SIZE);
+    
+    memcpy(pack_buf, p, PACKET_SIZE);
+    
+    int size=byteStuff(pack_buf,output);
+    
     cout << "Packet size AFTER stuffing=" << size << endl;
     int numFramesCreated=fragment(output,rawFrames,size);
     int framesAddedtoBuffer=0;
