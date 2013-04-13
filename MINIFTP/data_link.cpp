@@ -12,6 +12,17 @@
 
 eventEntry* queueHead=NULL;
 
+int numFramesSent=0; // good
+int numReTrans=0; // good
+int numAckSent=0; // good
+int numFramesRecCor=0; // good
+int numAckRecCor=0; // good
+int numFrameErr=0; // good
+int numAckRecErr=0; // good
+int numDupFrameRec=0; // good
+int numBlockFull=0; // good
+int lastLog=(int)time(NULL);
+
 static bool between(seq_nr a, seq_nr b, seq_nr c){
     /* Return true if a <= b < c circularly; false otherwise. */
     if (((a <= b) && (b < c)) || ((c < a) && (a <= b)) || ((b < c) && (c < a)))
@@ -21,6 +32,7 @@ static bool between(seq_nr a, seq_nr b, seq_nr c){
 }
 
 static void send_data(seq_nr frame_nr, frame buffer[], int sock){
+    numFramesSent++;
     /* Construct and send a data frame. */
     frame s; /* scratch variable */
     //s.info = buffer[frame_nr]; /* insert packet into frame */
@@ -45,7 +57,9 @@ static void send_data(seq_nr frame_nr, frame buffer[], int sock){
     start_timer(frame_nr); /* start the timer running */
 }
 
-void protocol5(int sock){ // removed network_fd because it's now global
+// type 0=server
+// type 1=client
+void protocol5(int type,int sock){ // removed network_fd because it's now global
     seq_nr next_frame_to_send; /* MAX SEQ > 1; used for outbound stream */
     //pipe
     
@@ -69,15 +83,11 @@ void protocol5(int sock){ // removed network_fd because it's now global
     next_frame_to_send = 0; /* next frame going out */
     frame_expected = 0; /* number of frame expected inbound */
     nbuffered = 0; /* initially no packets are buffered */
-    //nbufferedReserve=0;
+   
+    seq_nr lastSuccessful=-1;
+    
     while (true) {
-#ifdef DEBUG
-        //cout << "WAITING FOR EVENT IN DL\n";
-#endif
         wait_for_event(&event,sock); /* four possibilities: see event type above */
-#ifdef DEBUG
-        //cout << "EVENT RECEIVED -- " << event <<endl;
-#endif
         switch(event) {
             case network_layer_ready: /* the network layer has a packet to send */
             {
@@ -95,6 +105,9 @@ void protocol5(int sock){ // removed network_fd because it's now global
                 if (nbuffered < MAX_SEQ){
                     enable_network_layer();
                 }
+                else{
+                    numBlockFull++;
+                }
 
                 break;
             }
@@ -102,67 +115,82 @@ void protocol5(int sock){ // removed network_fd because it's now global
                 from_physical_layer(&r,sock); /* get incoming frame from physical layer */
                 // move to from_phy?
                 if(!checksumFrame(r)){
-                    cout << "CHECK SUM ERROR on ACK " << r.ack <<"\n";
+                    cout << "CHECK SUM ERROR " << r.ack <<"\n";
+                    numFrameErr++;
                     break;
                 }
-                //cout << "r.seq=" << r.seq << " r.kind=" << r.kind << endl;
-                else if (r.seq == frame_expected && r.kind==data) {
-                    /* Frames are accepted only in order. */
-                    
-                    //do stuff
-                    partialPacket.push_back(r);
-                    //cout << "r.remaining=" << r.remaining << endl;
-                    if(r.remaining==0){
-                        to_network_layer(partialPacket); /* pass packet to network layer */
-                        partialPacket.clear();
-                    }
-                    
-                    inc(frame_expected); /* advance lower edge of receiver’s window */
-                    
-                    // SEND ACK FOR THIS FRAME
-                    sendAck(&r,sock);
-                }
-                else if(r.kind==data){
-                    // SEND ACK FOR LAST SUCCESSFUL FRAME
-                    //seq_nr last_ack=ack_expected;
-                    //dec(last_ack);
-                    //r.seq=last_ack;
-                    //cout << "SENDING LAST SUCCESSFUL ACK of number " << last_ack <<"\n"<<endl;
-                    //sendAck(&r,sock);
-                }
-                else{ // means it's an ACK frame
-                    /* Ack n implies n − 1, n − 2, etc. Check for this. */
-                    cout << "CHECKING between(" << ack_expected << "," << r.ack << "," << next_frame_to_send <<")\n";
-                    //cout << "ACK RECEIVED for " << r.ack <<endl;
-                    
-                    while (between(ack_expected, r.ack, next_frame_to_send)) {
-                        /* Handle piggybacked ack. */
-                        //cout << "stopping timer for "<< ack_expected << endl;
-                        nbuffered = nbuffered - 1; /* one frame fewer buffered */
-                        stop_timer(ack_expected); /* frame arrived intact; stop timer */
-                        inc(ack_expected); /* contract sender’s window */
+                else{
+                    //cout << "r.seq=" << r.seq << " r.kind=" << r.kind << endl;
+                    numFramesRecCor++;
+                    if (r.seq == frame_expected && r.kind==data) {
+                        /* Frames are accepted only in order. */
+                        lastSuccessful=r.seq;
+                        //do stuff
+                        partialPacket.push_back(r);
+                        //cout << "r.remaining=" << r.remaining << endl;
+                        if(r.remaining==0){
+                            to_network_layer(partialPacket); /* pass packet to network layer */
+                            partialPacket.clear();
+                        }
                         
-                        /* If items in reserved, move to buffer and send */
-                        if(!reserved.empty()){
-                            frame temp=(frame)reserved.front();
-                            memcpy(&buffer[next_frame_to_send],&temp,FRAME_SIZE);
-                            reserved.erase(reserved.begin());
-                            nbuffered = nbuffered + 1; /* expand the sender’s window */
-                            send_data(next_frame_to_send, buffer, sock);
-                            inc(next_frame_to_send); /* advance sender’s upper window edge */
-                        }else{
-                            if(nbuffered < MAX_SEQ){
-                                enable_network_layer();
+                        inc(frame_expected); /* advance lower edge of receiver’s window */
+                        
+                        // SEND ACK FOR THIS FRAME
+                        sendAck(&r,sock);
+                    }
+                    else if(r.kind==data && between(lastSuccessful,r.ack,frame_expected)){
+                        // SEND ACK FOR LAST SUCCESSFUL FRAME
+                        //seq_nr last_ack=ack_expected;
+                        //dec(last_ack);
+                        //r.seq=last_ack;
+                        //cout << "SENDING LAST SUCCESSFUL ACK of number " << last_ack <<"\n"<<endl;
+                        numDupFrameRec++;
+                        sendAck(&r,sock);
+                    }
+                    else if(r.kind==data){
+                        break;
+                    }
+                    else{ // means it's an ACK frame
+                        /* Ack n implies n − 1, n − 2, etc. Check for this. */
+                        cout << "CHECKING between(" << ack_expected << "," << r.ack << "," << next_frame_to_send <<")\n";
+                        //cout << "ACK RECEIVED for " << r.ack <<endl;
+                        if(between(ack_expected, r.ack, next_frame_to_send))
+                            numAckRecErr++;
+                        
+                        while (between(ack_expected, r.ack, next_frame_to_send)) {
+                            numAckRecCor++;
+                            /* Handle piggybacked ack. */
+                            //cout << "stopping timer for "<< ack_expected << endl;
+                            nbuffered = nbuffered - 1; /* one frame fewer buffered */
+                            stop_timer(ack_expected); /* frame arrived intact; stop timer */
+                            inc(ack_expected); /* contract sender’s window */
+                            
+                            /* If items in reserved, move to buffer and send */
+                            if(!reserved.empty()){
+                                frame temp=(frame)reserved.front();
+                                memcpy(&buffer[next_frame_to_send],&temp,FRAME_SIZE);
+                                reserved.erase(reserved.begin());
+                                nbuffered = nbuffered + 1; /* expand the sender’s window */
+                                send_data(next_frame_to_send, buffer, sock);
+                                inc(next_frame_to_send); /* advance sender’s upper window edge */
+                            }else{
+                                if(nbuffered < MAX_SEQ){
+                                    enable_network_layer();
+                                }
+                                else{
+                                    numBlockFull++;
+                                }
                             }
                         }
+                        
                     }
-
                 }
                 break;
             case timeout: /* trouble; retransmit all outstanding frames */
                 next_frame_to_send = ack_expected; /* start retransmitting here */
                 //cout << "Retransmitting " << next_frame_to_send << endl;
                 for (i = 1; i <= nbuffered; i++) {
+                    numReTrans++;
                     remove_bySeq(queueHead, &queueHead, queueHead->seqNum);
                     send_data(next_frame_to_send, buffer, sock);/* resend frame */
                     inc(next_frame_to_send); /* prepare to send the next one */
@@ -174,6 +202,10 @@ void protocol5(int sock){ // removed network_fd because it's now global
     }
     if(nbuffered >= MAX_SEQ){
         //cout << "NUMBUFFERED=" << nbuffered << " BUFFER INDEX=" << next_frame_to_send <<endl;
+    }
+    if((time(NULL)-lastLog)>2){
+        cout << "LOGGING!\n";
+        log(type);
     }
 }
 
@@ -499,13 +531,59 @@ void sendAck(frame *r, int sock){
     ackFrame.kind=ack;
     //ackFrame.ack=ackFrame.seq;
     ackFrame.ack=ackFrame.seq;
-    
+    //cout << "SENDING ACK NUM=" << ackFrame.ack <<endl;
     char result[CHECK_SUM_LENGTH];
     checksum(ackFrame.info, PAYLOAD_SIZE, result);
     memcpy(ackFrame.checkSum,result,2);
+    numAckSent++;
     //cout << "ACK checksum=" << "ackframe=" << ackFrame.checkSum[0] << ","<< ackFrame.checkSum[1] <<endl;
     to_physical_layer(&ackFrame, sock);
 }
 
+void log(int type){
+    if(type==0) {// server
+        ofstream fout;
+        string filename="logfile"+activeUser;
+        fout.open("serverLog.txt");
+        if(!fout.is_open()){
+            cerr << "Failed to open file\n";
+        }
+        else{
+            fout << "SERVER LOG -- TIME" << time(NULL) <<endl <<endl;
+            fout << "1. Total number of data frames sent - " << numFramesSent <<endl;
+            fout << "2. Total number of retransmissions sent - " << numReTrans <<endl;
+            fout << "3. Total number of acknowledgments sent - " << numAckSent <<endl;
+            fout << "4. Total number of data frames received correctly - " << numFramesRecCor <<endl;
+            fout << "5. Total number of acknowledgments received correctly - " << numAckRecCor <<endl;
+            fout << "6. Total number of data frames received with errors - " << numFrameErr <<endl;
+            fout << "7. Total number of acknowledgements received with errors - " << numAckRecErr <<endl;
+            fout << "8. Total number of duplicate frames received - " << numDupFrameRec <<endl;
+            fout << "9. Total number of times the data link layer blocks due to a full window. - " << numBlockFull <<endl;
+        }
+        fout.close();
+        
+    }
+    else if(type==1){
+        ofstream fout;
+        fout.open("clientLog.txt");
+        if(!fout.is_open()){
+            cerr << "Failed to open file\n";
+        }
+        else{
+            fout << "CLIENT LOG -- TIME" << time(NULL) <<endl <<endl;
+            fout << "1. Total number of data frames sent - " << numFramesSent <<endl;
+            fout << "2. Total number of retransmissions sent - " << numReTrans <<endl;
+            fout << "3. Total number of acknowledgments sent - " << numAckSent <<endl;
+            fout << "4. Total number of data frames received correctly - " << numFramesRecCor <<endl;
+            fout << "5. Total number of acknowledgments received correctly - " << numAckRecCor <<endl;
+            fout << "6. Total number of data frames received with errors - " << numFrameErr <<endl;
+            fout << "7. Total number of acknowledgements received with errors - " << numAckRecErr <<endl;
+            fout << "8. Total number of duplicate frames received - " << numDupFrameRec <<endl;
+            fout << "9. Total number of times the data link layer blocks due to a full window. - " << numBlockFull <<endl;
+        }
+        fout.close();
+    }
+    
+}
 
 

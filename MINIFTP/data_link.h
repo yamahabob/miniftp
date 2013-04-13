@@ -31,6 +31,7 @@ extern int fromDL[2];
 extern int signalFromDL[2];
 extern int networkEnabled;
 extern int errorRate;
+extern string activeUser;
 
 
 
@@ -61,7 +62,7 @@ void disable_network_layer(void);
 #define MAX_SEQ 7
 #define FRAME_SIZE 120
 
-void protocol5(int sock); //removed network_fd see .cpp file
+void protocol5(int type, int sock); //removed network_fd see .cpp file
 static bool between(seq_nr a, seq_nr b, seq_nr c);
 int byteStuff(char *input, char *output);
 void deStuff(vector <frame> partialPackets, packet *p);
@@ -72,5 +73,6 @@ int checksumFrame(frame f);
 int fragment(char *stuffedPacket, frame rawFrames[MAX_FRAME_SPLIT], int size);
 int split(packet *p, frame buffer[], vector<frame> & reserved, int next_frame_to_send, seq_nr nbuffered);
 void sendAck(frame *r, int sock);
+void log(int type);
 
 #endif

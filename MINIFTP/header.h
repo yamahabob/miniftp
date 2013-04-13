@@ -21,7 +21,7 @@
 using namespace std;
 
 const string PORT="7766"; // unused port
-const char DELIM=' ';
+const char DELIM='*';
 //const char START_DELIM='S';
 //const char END_DELIM='E';
 

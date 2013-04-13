@@ -38,7 +38,7 @@ int main(int argc, char **argv){
             //close(toDL[1]);
             //close(fromDL[0]);
             //close(signalFromDL[0]);
-            protocol5(serverSock);
+            protocol5(1,serverSock);
 #ifdef DEBUG
             cout << "Closing DL\n";
 #endif
@@ -48,7 +48,7 @@ int main(int argc, char **argv){
             //close(toDL[0]);
             //close(fromDL[1]);
             //close(signalFromDL[1]);
-            cout << "DATALINK PID=" << pid << endl;
+            //cout << "DATALINK PID=" << pid << endl;
             //close(serverSock); // close communicating socket
             if(login()==1){
                 exit_status=processCommands(toDL[1]); // if just logout->exit=0, if logout_exit->exit=1
@@ -160,8 +160,10 @@ int login(){
     parseMessage(response.c_str(), cmd, arguments);
     
     //replace this with conversion function
-    if(atoi(cmd.c_str())==MSG_OK)
+    if(atoi(cmd.c_str())==MSG_OK){
+        activeUser=username;
         return 1;
+    }
     else
         return 0;
 }
@@ -178,7 +180,8 @@ int processCommands(int dl_fd){
         
         string cmd;
         vector<string> arguments;
-        parseMessage(line, cmd, arguments);
+        
+        parseUserMessage(line, cmd, arguments);
         
         //cout << "Command=" << cmd;
         //cout << "Argument of 0" << arguments[0] << endl;
@@ -193,7 +196,6 @@ int processCommands(int dl_fd){
         else if(strcasecmp(cmd.c_str(),"list")==0){
         }
         else if(strcasecmp(cmd.c_str(),"put")==0){
-            
             int retVal=put(arguments);
             if(retVal==0)
                 cout << "Failed to transmit file\n";
@@ -202,7 +204,7 @@ int processCommands(int dl_fd){
             
         }
         else if(strcasecmp(cmd.c_str(),"get")==0){
-            int retVal=0;//;=get(arguments, sock);
+            int retVal=get(arguments);
             if(retVal==0)
                 cout << "Failed to receive file\n";
             else
@@ -244,10 +246,8 @@ int put(vector<string> arguments){
         cout << "File " << arguments[0] << " failed to open" << endl;
         return 0;
     }
-    
     sendMessage(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
 
-    //string response=receiveResponse(sock);
     string response=messageFromDL(fromDL[0]);
 
     string cmd;
@@ -274,8 +274,8 @@ int get(vector<string> arguments){
         return 0;
     }
     
-    //sendMessage(MSG_GET, arguments, toDL[1], fromDL[0]);
-    string response;//#=receiveResponse(sock);
+    sendMessage(MSG_GET, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+    string response=messageFromDL(fromDL[0]);
     
     string cmd;
     vector<string> args;
@@ -283,7 +283,7 @@ int get(vector<string> arguments){
     
     if(atoi(cmd.c_str())==MSG_OK){
         cout << "Received OK. Sending data....\n";
-        //receiveData(arguments, sock,fromDL[0]);
+        receiveData(arguments,fromDL[0]);
         //send file
     }
     else{

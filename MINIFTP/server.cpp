@@ -26,6 +26,7 @@ int toDL[2];
 int fromDL[2];
 int signalFromDL[2];
 int errorRate=-1;
+string activeUser;
 
 int main(int argc, char **argv){
     checkCommandLine(argc, argv);
@@ -91,7 +92,7 @@ int main(int argc, char **argv){
                 //close(toDL[1]);
                 //close(fromDL[0]);
                 //close(signalFromDL[0]);
-                protocol5(client_sock); //?
+                protocol5(0,client_sock); //?
                 cout << "DATA LINK LAYER DEAD\n";
                 exit(0);
             }
@@ -133,21 +134,6 @@ int main(int argc, char **argv){
 int processClient(){
     int sock=0; // THIS NO LONGER EXISTS should be writing everything to pipe, which is global (toDL/fromDL)
     
-    // "global" activeUser
-    string activeUser;
-    
-    //char msg[BUFFER_SIZE];
-    //memset(msg,0,BUFFER_SIZE);
-    //size_t bytesRec=recv(sock,msg,BUFFER_SIZE,0);
-//    msg[bytesRec]='\0';
-//#ifdef DEBUG
-//    cout <<"Received="<< msg<< " rec bytes=" << bytesRec << endl;
-//#endif
-//    if((int)bytesRec < 0){
-//        perror("Receive from client");
-//        cout<<"strerrno=" <<errno << endl;
-//        exit(1);
-//    }
     vector<string> empty;
 
     string messageReceived=messageFromDL(fromDL[0]);
@@ -163,7 +149,9 @@ int processClient(){
     // Verifying credentials against "shadow" file
     //if(verifyClient()){
     if(1){
+        //activeUser="GOES HERE"; // fill in
         activeUser=""; // fill in
+
         
         //send "OK"
         //size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
@@ -173,13 +161,15 @@ int processClient(){
         //}
         
         vector<string> empty;
+        cout << "SENDING OK FOR LOGIN\n";
         sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
+        cout << "SENT OK FOR LOGIN\n";
+
         
         while(1){ // until logout
             // receive next command from client
             string line;
             receiveCommand(line, sock);
-                        
             string cmd;
             vector<string> arguments;
             parseMessage(line.c_str(), cmd, arguments);
@@ -203,10 +193,8 @@ int processClient(){
             }
             // get
             else if(strcasecmp(cmd.c_str(),"4")==0){
-                // will need to verify file exists. for now assume it does
-                ostringstream convert;
-                convert << MSG_OK;
-                int retVal=0;//=sendData(MSG_DATA,arguments, sock);
+                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                int retVal=sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
                 if(retVal==0)
                     cout << "Failed to send file\n";
                 else
@@ -221,6 +209,9 @@ int processClient(){
             }
             // revoke
             else if(strcasecmp(cmd.c_str(),"7")==0){
+            }
+            else{
+                sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
             }
         }
     }

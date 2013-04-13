@@ -13,24 +13,48 @@
 //command and arguments. It returns the number of arguments.
 void parseMessage(const char* msg, string & command,
                   vector<string> & arguments){
-    char str[BUFFER_SIZE]; //work with a copy of the input message
-    strcpy(str, msg);
+    bool arg = false;
+    string tmp;
     
-    char *tmp=strtok (str,&DELIM); //get the first token, i.e. the command
+    for(int i = 0; i < strlen(msg); i++){
+        if(msg[i] == DELIM){
+            if(!arg){
+                cout << "CMD " <<tmp << endl;
+                command = tmp;
+                arg = true;
+            }
+            else{
+                cout << "PUSHING " <<tmp << endl;
+                arguments.push_back(tmp);
+            }
+            tmp="";
+        }
+        else{
+            tmp += msg[i];
+        }
+    }
+
+}
+
+void parseUserMessage(char* msg, string & command,
+                  vector<string> & arguments){
+    char *tmp=strtok(msg," "); //get the first token, i.e. the command
+    //" and str now =" << str<< endl;
     if(tmp)
         command=string(tmp);
     
     while (tmp != NULL){
-        char* str = strtok (NULL, &DELIM); //fill in the next argument
-        tmp = str;
+        char* str2 = strtok (NULL, " "); //fill in the next argument
+        tmp = str2;
         
         if(tmp == NULL) //end of the message
             break;
         
         //copy the value to the returning list of arguments:
-        arguments.push_back(string(str));
+        arguments.push_back(string(str2));
     }
 }
+
 
 int sendData(int cmd, vector<string> parameters, int toDL, int fromDL, int signalFromDL){
     ifstream fin;
@@ -74,6 +98,7 @@ int receiveData(vector<string> arguments, int fromDL){
         cerr << "Failed to open file\n";
         return 0;
     }
+    
     packet pack;
     int packetNum=0;
     
@@ -125,41 +150,22 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int s
 }
 
 //Sends a packet to the data-link layer
-int to_data_link(packet *p, int toDL, int fromDL, int sigFromDL){
-    //char buff[3];
-    
+int to_data_link(packet *p, int toDL, int fromDL, int sigFromDL){    
     //We assume that it waits until a message comes from data-link:
     char dlStatus;
     read(sigFromDL, &dlStatus, 1);
     write(toDL, p, sizeof(packet));
-    //cout << "SENT " << bytesSent << " bytes TO DL which should equal " << PACKET_SIZE << "\n";
-    //}
-    //else{
-       // cerr << "data link is out of sync";
-    //}
     return 1;
 }
 
 string messageFromDL(int fromDL){
-    //cout <<"Starting messsageFromDL" << endl;
-    //string message;
     char message[PACKET_DATA_SIZE+1];
     memset(message,'\0',PACKET_DATA_SIZE+1);
 
     packet packetReceived;
     
-    //int bytesRec=(int)
     read(fromDL,&packetReceived,sizeof(packet));
     
-    // check eof?
-    // only copy number of "good" bytes
-    //if(packetReceived.dataSize>183){
-        cout << "packReceived.dataSize=" <<packetReceived.dataSize << endl;
-        //cout << "enter manual size:";
-      //  cin >>packetReceived.dataSize;
-    //}
-    
-    cout << "messageFromDL.size=" << packetReceived.dataSize <<endl;
     memcpy(message,packetReceived.data,packetReceived.dataSize);
     
     message[packetReceived.dataSize]='\0';
@@ -168,9 +174,6 @@ string messageFromDL(int fromDL){
     if(errno!=0){
         cout << "errno set! -- " << errno << " with error:" << strerror(errno) << endl;
     }
-    
-    //cout <<"Message being returned from DL="<< message<< " --  Bytes Received=" << bytesRec<< endl;
-    
     return string(message);
 }
 
