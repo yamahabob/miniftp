@@ -19,12 +19,10 @@ void parseMessage(const char* msg, string & command,
     for(int i = 0; i < strlen(msg); i++){
         if(msg[i] == DELIM){
             if(!arg){
-                cout << "CMD " <<tmp << endl;
                 command = tmp;
                 arg = true;
             }
             else{
-                cout << "PUSHING " <<tmp << endl;
                 arguments.push_back(tmp);
             }
             tmp="";
@@ -76,7 +74,6 @@ int sendData(int cmd, vector<string> parameters, int toDL, int fromDL, int signa
         // need both start and end DELIM
         int bytesRead=(int)fin.gcount(); // originally a long casted to int
         pack.dataSize = bytesRead;
-        cout << "dataSize=" << pack.dataSize <<endl;
         
         pack.last = 0;
         

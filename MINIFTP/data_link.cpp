@@ -115,7 +115,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                 from_physical_layer(&r,sock); /* get incoming frame from physical layer */
                 // move to from_phy?
                 if(!checksumFrame(r)){
-                    cout << "CHECK SUM ERROR " << r.ack <<"\n";
+                    //cout << "CHECK SUM ERROR " << r.ack <<"\n";
                     numFrameErr++;
                     break;
                 }
@@ -152,7 +152,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                     }
                     else{ // means it's an ACK frame
                         /* Ack n implies n − 1, n − 2, etc. Check for this. */
-                        cout << "CHECKING between(" << ack_expected << "," << r.ack << "," << next_frame_to_send <<")\n";
+                        //cout << "CHECKING between(" << ack_expected << "," << r.ack << "," << next_frame_to_send <<")\n";
                         //cout << "ACK RECEIVED for " << r.ack <<endl;
                         if(between(ack_expected, r.ack, next_frame_to_send))
                             numAckRecErr++;
@@ -203,7 +203,9 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
     if(nbuffered >= MAX_SEQ){
         //cout << "NUMBUFFERED=" << nbuffered << " BUFFER INDEX=" << next_frame_to_send <<endl;
     }
-    if((time(NULL)-lastLog)>2){
+    
+    cout << "CHECKING " << (int)(time(NULL)-lastLog) << ">2" <<endl;
+    if((int)(time(NULL)-lastLog)>2){
         cout << "LOGGING!\n";
         log(type);
     }
@@ -279,7 +281,7 @@ void from_network_layer(packet *p){ /* fetch new packet */
 void to_network_layer(vector<frame> framesToNL){
     packet p;
     deStuff(framesToNL,&p);
-    cout << "DATASIZE GOINT TO NET=" << p.dataSize <<endl;
+    //cout << "DATASIZE GOINT TO NET=" << p.dataSize <<endl;
     int bytesSent=(int)write(fromDL[1],&p,sizeof(packet));
     if(bytesSent<sizeof(packet)){
         perror("well, this sucks...");
@@ -384,7 +386,7 @@ int byteStuff(char *input, char *output){
             output[ind++] = input[i];
         }
     }
-    cout << "STUFFED PACKET =\"" << output+8 << "\"\n" <<endl;
+    //cout << "STUFFED PACKET =\"" << output+8 << "\"\n" <<endl;
     return ind; //size
 }
 
@@ -419,7 +421,6 @@ void deStuff(vector <frame> partialPackets, packet *p){
         
         partialPackets.erase(partialPackets.begin());
     }
-    cout << "unstuffed packet=" << pack_buf+8 <<endl;
     memcpy(p, pack_buf, PACKET_SIZE);
 }
 
@@ -448,7 +449,7 @@ int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]){
 
 int fragment(char *stuffedPacket, frame rawFrames[MAX_FRAME_SPLIT], int size)
 {
-    cout << "Stuffed packet received="<< stuffedPacket <<endl;
+    //cout << "Stuffed packet received="<< stuffedPacket <<endl;
     int len = size;
     int i=0;
     for(i=0;i<ceil(((float)len/PAYLOAD_SIZE));i++){

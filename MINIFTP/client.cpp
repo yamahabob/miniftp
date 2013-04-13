@@ -55,7 +55,8 @@ int main(int argc, char **argv){
                 // collect?
             }
             cout << "CLIENT PROCESS DEAD\n";
-            wait(&pid); // right syntax?
+            int status;
+            wait(&status); // right syntax?
         }
         else{
             perror("OMG FORK");
