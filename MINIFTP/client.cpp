@@ -19,7 +19,6 @@ string activeUser="";
 
 // runs the program
 int main(int argc, char **argv){
-    cout << "SIZEOF(PACKET)=" << sizeof(packet) <<endl;
     checkCommandLine(argc,argv);
     int serverSock=connectToServer();
     int exit_status=0;
@@ -31,7 +30,7 @@ int main(int argc, char **argv){
         pipe(toDL);
         pipe(fromDL);
         pipe(signalFromDL);
-        int pid;
+        int pid=-1;
         if((pid=fork())==0){
 #ifdef DEBUG
             cout << "Starting DL\n";
@@ -49,11 +48,13 @@ int main(int argc, char **argv){
             //close(toDL[0]);
             //close(fromDL[1]);
             //close(signalFromDL[1]);
+            cout << "DATALINK PID=" << pid << endl;
             //close(serverSock); // close communicating socket
             if(login()==1){
                 exit_status=processCommands(toDL[1]); // if just logout->exit=0, if logout_exit->exit=1
                 // collect?
             }
+            cout << "CLIENT PROCESS DEAD\n";
             wait(&pid); // right syntax?
         }
         else{
@@ -70,7 +71,7 @@ void checkCommandLine(int argc, char **argv){
         serverAddress="127.0.0.1";
     else if(argc>1){
         if(strcmp(argv[1],"-a")==0 && argc>=3){
-            serverAddress=string(argv[1]);
+            serverAddress=string(argv[2]);
             if(argc>=5 && strcmp(argv[3],"-e")==0){
                 errorRate=atoi(argv[4]);
             }
@@ -142,7 +143,7 @@ int login(){
     parameters.push_back(password);
     
 #ifdef DEBUG
-    cout << "LOGIN USER/PASS=" << username << "/" << password << endl;
+    //cout << "LOGIN USER/PASS=" << username << "/" << password << endl;
 #endif
     
     vector<string> empty;
@@ -158,11 +159,6 @@ int login(){
     
     parseMessage(response.c_str(), cmd, arguments);
     
-    
-    cout << "RESPONSE=" << cmd << endl;
-    //int temp;
-    //cin >> temp;
-    
     //replace this with conversion function
     if(atoi(cmd.c_str())==MSG_OK)
         return 1;
@@ -171,22 +167,21 @@ int login(){
 }
 
 int processCommands(int dl_fd){
-    int exit=0;
+    int exitstatus=0;
+    cin.ignore(MAX_MESSAGE_LEN, '\n');
     while(1){
         //string line;
         cout << "#>";
         char line[MAX_MESSAGE_LEN];
         memset(line,'\0',MAX_MESSAGE_LEN);
-        cin.ignore(MAX_MESSAGE_LEN, '\n');
         cin.getline(line, MAX_MESSAGE_LEN);
         
-        cout << "line=" << line << endl;
         string cmd;
         vector<string> arguments;
         parseMessage(line, cmd, arguments);
         
-        cout << "Command=" << cmd;
-        cout << "Argument of 0" << arguments[0] << endl;
+        //cout << "Command=" << cmd;
+        //cout << "Argument of 0" << arguments[0] << endl;
         
         if(strcasecmp(cmd.c_str(),"login")==0){
             login(); // ignoring return value of login (1)
@@ -221,8 +216,13 @@ int processCommands(int dl_fd){
         }
         else if(strcasecmp(cmd.c_str(),"exit")==0){
             activeUser="";
-            exit=1;
+            exitstatus=1;
             break;
+        }else{
+            cout << "Command " << line << " INVALID" << endl;
+            cout << "enter val:";
+            int temp;
+            cin >>temp;
         }
     }
     
@@ -230,23 +230,6 @@ int processCommands(int dl_fd){
         return 1;
     else
         return 0;
-}
-
-string receiveResponse(int sock){
-    /*
-    char msg_buffer[BUFFER_SIZE];
-    ssize_t bytesRec=recv(sock,&msg_buffer,100,0);
-    msg_buffer[bytesRec]='\0';
-    if(bytesRec < 1){
-        perror("Failed to receive a message from server\n");
-        exit(1);
-    }
-    if(bytesRec>1)
-        return string(msg_buffer);
-    else
-        return "";
-     */
-    return "FUCK YOU";
 }
 
 int checkNumArguments(int cmd, vector<string> arguments){
@@ -262,9 +245,7 @@ int put(vector<string> arguments){
         return 0;
     }
     
-    cout << "Sending put command to server\n";
     sendMessage(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
-    cout << "Received answer to put command to server\n";
 
     //string response=receiveResponse(sock);
     string response=messageFromDL(fromDL[0]);

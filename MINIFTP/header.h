@@ -33,7 +33,7 @@ typedef unsigned int seq_nr;
 #define PACKET_SIZE 192
 #define PACKET_DATA_SIZE 184
 #define MAX_MESSAGE_LEN 190 // need to put in design report
-#define FRAME_TIMEOUT 5
+#define FRAME_TIMEOUT 1
 
 // Messages
 #define MSG_LOGIN 0

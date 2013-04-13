@@ -12,6 +12,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <openssl/sha.h>
+#include <sstream>
 
 #include "header.h"
 #include "server.h"
@@ -27,7 +28,7 @@ int signalFromDL[2];
 int errorRate=-1;
 
 int main(int argc, char **argv){
-
+    checkCommandLine(argc, argv);
     int sock=serverSetup();
     srand((int)time(NULL));
     
@@ -79,7 +80,7 @@ int main(int argc, char **argv){
             int pidDL;
             if((pidDL=fork())==0){
 #ifdef DEBUG
-                cout << "DL layer started\n";
+                //cout << "DL layer started\n";
                 //write(fromDL[1],"hello",5);
                 //char buffer[6];
                 //read(fromDL[0],buffer,5);
@@ -91,11 +92,12 @@ int main(int argc, char **argv){
                 //close(fromDL[0]);
                 //close(signalFromDL[0]);
                 protocol5(client_sock); //?
+                cout << "DATA LINK LAYER DEAD\n";
                 exit(0);
             }
             else if (pidDL>0){
 #ifdef DEBUG
-                cout << "Processing client started\n";
+                //cout << "Processing client started\n";
 #endif
                 //close(toDL[0]);
                 //close(fromDL[1]);
@@ -104,6 +106,7 @@ int main(int argc, char **argv){
                 //close(client_sock);
                 //int returnStatus=processClient(client_sock); // shouldn't have a socket anymore because DL does all transfers
                 int returnStatus=processClient();
+                cout << "CLIENT PROCESS DEAD\n";
                 wait(&pidDL); // HOW DOES DL KNOW TO DIE?
                 exit(returnStatus);
                 
@@ -147,9 +150,7 @@ int processClient(){
 //    }
     vector<string> empty;
 
-    cout << "APPLICATION LAYER CALLING MESSAGE FROM DL\n";
     string messageReceived=messageFromDL(fromDL[0]);
-    cout << "!!!Message received from DL in Server app--" << messageReceived << endl;
         
     // LOGIN
     string cmd="";
@@ -172,20 +173,16 @@ int processClient(){
         //}
         
         vector<string> empty;
-        cout << "APPLICATION LAYER SENDING OK\n";
         sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
-        cout << "APPLICATION LAYER RETURNED FROM SENDING OK\n";
         
         while(1){ // until logout
             // receive next command from client
             string line;
-            cout << "APPLICATION LAYER WAITING TO RECEIVE COMMAND\n";
             receiveCommand(line, sock);
                         
             string cmd;
             vector<string> arguments;
             parseMessage(line.c_str(), cmd, arguments);
-            cout << "PARSED MESSAGE CMD=" << cmd <<endl;
            // logout
            if(strcasecmp(cmd.c_str(),"1")==0){
                 activeUser="";
@@ -196,14 +193,7 @@ int processClient(){
             }
             // put
             else if(strcasecmp(cmd.c_str(),"3")==0){
-//                size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
-//                if((int)bytesSent < sizeof(MSG_OK)){
-//                    perror("Sending to client:");
-//                    exit(1);
-//                }
-                cout << "RECEIVED PUT COMMAND: sending OK\n";
-                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
-                //int retVal=receiveData(arguments, sock);
+                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
                 int retVal=receiveData(arguments,fromDL[0]);
                 
                 if(retVal==0)
@@ -214,11 +204,8 @@ int processClient(){
             // get
             else if(strcasecmp(cmd.c_str(),"4")==0){
                 // will need to verify file exists. for now assume it does
-                size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
-                if((int)bytesSent < sizeof(MSG_OK)){
-                    perror("Sending to client:");
-                    exit(1);
-                }
+                ostringstream convert;
+                convert << MSG_OK;
                 int retVal=0;//=sendData(MSG_DATA,arguments, sock);
                 if(retVal==0)
                     cout << "Failed to send file\n";
@@ -244,7 +231,7 @@ int processClient(){
     }
     
 #ifdef DEBUG
-    cout <<"Successful login\n";
+    //cout <<"Successful login\n";
 #endif
     
     return 0;
@@ -271,11 +258,9 @@ void receiveCommand(string & line, int sock){
     }
     line=string(msg.data);
     */
-    cout << "Wanting command from client!\n";
     line=messageFromDL(fromDL[0]);
 //    int temp;
   //  cin >> temp;
-    cout << "First command from client=" << line << endl;
 }
 
 int serverSetup(){
@@ -317,6 +302,19 @@ int serverSetup(){
     
     return sock;
 
+}
+
+// Checks if user wishes to connected to server other than localhost
+void checkCommandLine(int argc, char **argv){
+    if(argc>1){
+        if(strcmp(argv[1],"-e")==0 && argc>=3){
+            errorRate=atoi(argv[2]);
+        }
+        else{
+            fprintf(stderr,"Usage: ./server -e [error]\n");
+            exit(1);
+        }
+    }
 }
 
 /*

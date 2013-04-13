@@ -56,7 +56,8 @@ int add_eventEntry(eventEntry* head, seq_nr seqNum, int timestamp ,eventEntry** 
             }
         }
         else{ //Entry is duplicate. Free its memory.
-            free (newEntry);
+            if(newEntry!=NULL)
+                free (newEntry);
         }
     }
     
@@ -76,11 +77,11 @@ int remove_byTime(eventEntry* head, eventEntry** newHead, int curTime){//removes
         
         while(ptr != NULL){ //traverse the list
 #ifdef DEBUG
-            cout << curTime << "-" << ptr->timestamp << ">" << FRAME_TIMEOUT << "=" << ((curTime-ptr->timestamp)>FRAME_TIMEOUT) <<endl;
+            //cout << curTime << "-" << ptr->timestamp << ">" << FRAME_TIMEOUT << "=" << ((curTime-ptr->timestamp)>FRAME_TIMEOUT) <<endl;
 #endif
             if((curTime-ptr->timestamp)>=FRAME_TIMEOUT){
 #ifdef DEBUG
-                cout << "Removing element from list\n";
+                //cout << "Removing element from list\n";
 #endif
                 if(ptr==head){
                     //update head and remove
@@ -90,7 +91,8 @@ int remove_byTime(eventEntry* head, eventEntry** newHead, int curTime){//removes
                 else{
                     // remove and update previous pointer
                     prev->next=ptr->next;
-                    free(ptr);
+                    if(ptr!=NULL)
+                        free(ptr);
                 }
             }
             prev=ptr;

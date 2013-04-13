@@ -7,7 +7,7 @@
 
 
 #include "event_queue.h"
-typedef enum{frame_arrival, cksum_err, timeout, network_layer_ready, dl_die} event_type;
+typedef enum{frame_arrival, timeout, network_layer_ready, dl_die} event_type;
 
 #define CHECK_SUM_LENGTH 2
 #define MAX_FRAME_SPLIT 4
@@ -54,6 +54,7 @@ void enable_network_layer(void);
 void disable_network_layer(void);
 /* Macro inc is expanded in-line: increment k circularly. */
 #define inc(k) if (k < MAX_SEQ) k = k + 1; else k = 0
+#define dec(k) if (k > 0) k = k - 1; else k = MAX_SEQ
 /* End protocol.h */
 
 
