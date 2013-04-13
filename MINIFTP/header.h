@@ -18,16 +18,18 @@
 #include <netdb.h>
 #include <vector>
 #include <math.h>
+#include <sys/wait.h>
 using namespace std;
 
 const string PORT="7766"; // unused port
-const char DELIM='*';
+const char DL_DELIM=0x10;
+const char APP_DELIM=' ';
+
 //const char START_DELIM='S';
 //const char END_DELIM='E';
 
 typedef unsigned int seq_nr;
 
-//const char DELIM=0x10;
 #define BUFFER_SIZE 100
 #define PAYLOAD_SIZE 100
 #define PACKET_SIZE 192

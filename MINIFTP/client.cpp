@@ -11,6 +11,7 @@
 int toDL[2];
 int fromDL[2];
 int signalFromDL[2];
+int killDL[2];
 int errorRate=-1;
 
 
@@ -30,14 +31,16 @@ int main(int argc, char **argv){
         pipe(toDL);
         pipe(fromDL);
         pipe(signalFromDL);
+        pipe(killDL);
         int pid=-1;
         if((pid=fork())==0){
 #ifdef DEBUG
             cout << "Starting DL\n";
 #endif
-            //close(toDL[1]);
-            //close(fromDL[0]);
-            //close(signalFromDL[0]);
+            close(toDL[1]);
+            close(fromDL[0]);
+            close(signalFromDL[0]);
+            close(killDL[1]);
             protocol5(1,serverSock);
 #ifdef DEBUG
             cout << "Closing DL\n";
@@ -45,18 +48,22 @@ int main(int argc, char **argv){
             exit(0);
         }
         else if(pid>0){
-            //close(toDL[0]);
-            //close(fromDL[1]);
-            //close(signalFromDL[1]);
+            close(toDL[0]);
+            close(fromDL[1]);
+            close(signalFromDL[1]);
+            close(killDL[0]);
             //cout << "DATALINK PID=" << pid << endl;
-            //close(serverSock); // close communicating socket
+            close(serverSock); // close communicating socket
             if(login()==1){
                 exit_status=processCommands(toDL[1]); // if just logout->exit=0, if logout_exit->exit=1
                 // collect?
             }
-            cout << "CLIENT PROCESS DEAD\n";
+            // KILL DATA LINK HERE!
+            char kill='1';
+            write(killDL[1],&kill,1);
+            cout << "CLIENT APP ON CLIENT DEAD... KILLING DL\n";
             int status;
-            wait(&status); // right syntax?
+            waitpid(pid,&status,0); // right syntax?
         }
         else{
             perror("OMG FORK");
@@ -143,16 +150,13 @@ int login(){
     parameters.push_back(username);
     parameters.push_back(password);
     
-#ifdef DEBUG
-    //cout << "LOGIN USER/PASS=" << username << "/" << password << endl;
-#endif
-    
     vector<string> empty;
 
     sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
     
-    //string response=receiveResponse(sock);
+    cout << "waiting for response\n";
     string response=messageFromDL(fromDL[0]);
+    cout << "got response\n";
 
     
     string cmd;
@@ -160,13 +164,16 @@ int login(){
     
     parseMessage(response.c_str(), cmd, arguments);
     
-    //replace this with conversion function
     if(atoi(cmd.c_str())==MSG_OK){
         activeUser=username;
         return 1;
     }
-    else
+    else{
+        // MEANS MSG_ERROR RETURNED -- bad credentials
+        sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
+        cout << "Invalid credentials\n";
         return 0;
+    }
 }
 
 int processCommands(int dl_fd){
@@ -184,9 +191,6 @@ int processCommands(int dl_fd){
         
         parseUserMessage(line, cmd, arguments);
         
-        //cout << "Command=" << cmd;
-        //cout << "Argument of 0" << arguments[0] << endl;
-        
         if(strcasecmp(cmd.c_str(),"login")==0){
             login(); // ignoring return value of login (1)
         }
@@ -197,7 +201,10 @@ int processCommands(int dl_fd){
         else if(strcasecmp(cmd.c_str(),"list")==0){
         }
         else if(strcasecmp(cmd.c_str(),"put")==0){
+            // START TIMER
             int retVal=put(arguments);
+            // END TIMER
+
             if(retVal==0)
                 cout << "Failed to transmit file\n";
             else
@@ -205,7 +212,9 @@ int processCommands(int dl_fd){
             
         }
         else if(strcasecmp(cmd.c_str(),"get")==0){
+            // START TIMER
             int retVal=get(arguments);
+            // END TIMER
             if(retVal==0)
                 cout << "Failed to receive file\n";
             else
@@ -229,7 +238,7 @@ int processCommands(int dl_fd){
         }
     }
     
-    if(exit)
+    if(exitstatus==1)
         return 1;
     else
         return 0;

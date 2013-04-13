@@ -29,6 +29,7 @@ typedef struct{
 extern int toDL[2];
 extern int fromDL[2];
 extern int signalFromDL[2];
+extern int killDL[2];
 extern int networkEnabled;
 extern int errorRate;
 extern string activeUser;

@@ -9,6 +9,7 @@
 #include "header.h"
 #include "data_link.h"
 #include <algorithm> // for max
+#include <sstream>
 
 eventEntry* queueHead=NULL;
 
@@ -86,6 +87,8 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
    
     seq_nr lastSuccessful=-1;
     
+    log(type);
+    
     while (true) {
         wait_for_event(&event,sock); /* four possibilities: see event type above */
         switch(event) {
@@ -154,7 +157,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                         /* Ack n implies n − 1, n − 2, etc. Check for this. */
                         //cout << "CHECKING between(" << ack_expected << "," << r.ack << "," << next_frame_to_send <<")\n";
                         //cout << "ACK RECEIVED for " << r.ack <<endl;
-                        if(between(ack_expected, r.ack, next_frame_to_send))
+                        if(!between(ack_expected, r.ack, next_frame_to_send))
                             numAckRecErr++;
                         
                         while (between(ack_expected, r.ack, next_frame_to_send)) {
@@ -196,18 +199,14 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                     inc(next_frame_to_send); /* prepare to send the next one */
                 }
                 break;
-            case dl_die: exit(0);
+            case dl_die:
+                log(type);
+                return;
         }
-        
-    }
-    if(nbuffered >= MAX_SEQ){
-        //cout << "NUMBUFFERED=" << nbuffered << " BUFFER INDEX=" << next_frame_to_send <<endl;
-    }
-    
-    cout << "CHECKING " << (int)(time(NULL)-lastLog) << ">2" <<endl;
-    if((int)(time(NULL)-lastLog)>2){
-        cout << "LOGGING!\n";
-        log(type);
+        if((int)(time(NULL)-lastLog)>2){
+            lastLog=(int)(time(NULL));
+            log(type);
+        }
     }
 }
 
@@ -218,6 +217,8 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
     FD_ZERO(&bvfdRead);
     FD_SET(sock, &bvfdRead);   /* socket from receiver */
     FD_SET(toDL[0], &bvfdRead);            /* pipe from network layer */
+    FD_SET(killDL[0], &bvfdRead);            /* pipe from app layer to die*/
+    
     struct timeval *timeToWait;
     timeToWait=(struct timeval *)malloc(sizeof(struct timeval));
     timeToWait->tv_sec=0;
@@ -240,6 +241,7 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
     }
     
     int maxVal=max(toDL[0], sock);
+    maxVal=max(maxVal,killDL[0]);
     if(select(maxVal+1, &bvfdRead, NULL, NULL, timeToWait)) {
         /* see what fd's have activity */
         if (FD_ISSET(sock, &bvfdRead)) {
@@ -254,6 +256,10 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
         if (FD_ISSET(toDL[0], &bvfdRead)) {
             //cout << "Network layer ready returning from wait for event\n";
             *event=network_layer_ready;
+        }
+        if (FD_ISSET(killDL[0], &bvfdRead)) {
+            //cout << "Network layer ready returning from wait for event\n";
+            *event=dl_die;
         }
     }
     else{
@@ -377,8 +383,7 @@ void disable_network_layer(void){
 int byteStuff(char *input, char *output){
     int ind = 0; //keeps track of the next position in output.
     for(int i = 0; i < PACKET_SIZE; i++){
-        //if(input[i] == '\x10'){ //if the input is DLE
-        if(input[i] == DELIM){
+        if(input[i] == DL_DELIM){
             output[ind++] = input[i];
             output[ind++] = input[i];
         }
@@ -405,7 +410,7 @@ void deStuff(vector <frame> partialPackets, packet *p){
         for(int i = 0; i < PAYLOAD_SIZE; i++){
             if(ind >= PACKET_SIZE)
                 break;
-            if(temp.info[i] == DELIM){ //The char is DLE
+            if(temp.info[i] == DL_DELIM){ //The char is DLE
                 if(metDLE){
                     pack_buf[ind++] = temp.info[i];
                     metDLE=false;
@@ -542,10 +547,15 @@ void sendAck(frame *r, int sock){
 }
 
 void log(int type){
+    ostringstream convert;
+    convert << getpid();
+    
+    //string msg_buffer=to_string(cmd);
+    string msg_buffer=convert.str();
     if(type==0) {// server
         ofstream fout;
-        string filename="logfile"+activeUser;
-        fout.open("serverLog.txt");
+        string filename="serverLog_"+convert.str()+".txt";
+        fout.open(filename.c_str());
         if(!fout.is_open()){
             cerr << "Failed to open file\n";
         }
@@ -566,7 +576,8 @@ void log(int type){
     }
     else if(type==1){
         ofstream fout;
-        fout.open("clientLog.txt");
+        string filename="clientLog_"+convert.str()+".txt";
+        fout.open(filename.c_str());
         if(!fout.is_open()){
             cerr << "Failed to open file\n";
         }

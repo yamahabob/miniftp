@@ -17,7 +17,7 @@ void parseMessage(const char* msg, string & command,
     string tmp;
     
     for(int i = 0; i < strlen(msg); i++){
-        if(msg[i] == DELIM){
+        if(msg[i] == APP_DELIM){
             if(!arg){
                 command = tmp;
                 arg = true;
@@ -132,9 +132,9 @@ void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int s
     //string msg_buffer=to_string(cmd);
     string msg_buffer=convert.str();
     for(int i=0;i<parameters.size();i++){
-        msg_buffer+= DELIM + parameters[i];
+        msg_buffer+= APP_DELIM + parameters[i];
     }
-    msg_buffer+= DELIM;
+    msg_buffer+= APP_DELIM;
     //msg_buffer += END_DELIM;
     //cout << "msg_buffer=\"" <<msg_buffer << "\" with size " << msg_buffer.length() << "\n";
 

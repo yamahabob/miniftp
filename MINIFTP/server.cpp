@@ -25,6 +25,7 @@
 int toDL[2];
 int fromDL[2];
 int signalFromDL[2];
+int killDL[2];
 int errorRate=-1;
 string activeUser;
 
@@ -76,22 +77,18 @@ int main(int argc, char **argv){
                 fprintf (stderr, "Pipe failed.\n");
                 return EXIT_FAILURE;
             }
+            if(pipe(killDL)){
+                fprintf (stderr, "Pipe failed.\n");
+                return EXIT_FAILURE;
+            }
 
             
             int pidDL;
             if((pidDL=fork())==0){
-#ifdef DEBUG
-                //cout << "DL layer started\n";
-                //write(fromDL[1],"hello",5);
-                //char buffer[6];
-                //read(fromDL[0],buffer,5);
-                //buffer[5]='\0';
-                //cout << "read from pipe "<< buffer<<endl;
-                //cout << "done reading from pipe\n";
-#endif
-                //close(toDL[1]);
-                //close(fromDL[0]);
-                //close(signalFromDL[0]);
+                close(toDL[1]);
+                close(fromDL[0]);
+                close(signalFromDL[0]);
+                close(killDL[1]);
                 protocol5(0,client_sock); //?
                 cout << "DATA LINK LAYER DEAD\n";
                 exit(0);
@@ -100,18 +97,18 @@ int main(int argc, char **argv){
 #ifdef DEBUG
                 //cout << "Processing client started\n";
 #endif
-                //close(toDL[0]);
-                //close(fromDL[1]);
-                //close(signalFromDL[1]);
-                //close(sock);
-                //close(client_sock);
-                //int returnStatus=processClient(client_sock); // shouldn't have a socket anymore because DL does all transfers
+                close(toDL[0]);
+                close(fromDL[1]);
+                close(signalFromDL[1]);
+                close(killDL[0]);
+                close(sock);
+                close(client_sock);
                 int returnStatus=processClient();
-                cout << "CLIENT PROCESS DEAD\n";
-                wait(&pidDL); // HOW DOES DL KNOW TO DIE?
+                cout << "CLIENT APP ON SERVER DEAD... KILLING DL\n";
+                char kill='1';
+                write(killDL[1],&kill,1);
+                wait(&pidDL);
                 exit(returnStatus);
-                
-                //exit(processClient(client_sock));
             }
             else{
                 perror("OMG FORK FAILED FOR DL");
@@ -120,9 +117,7 @@ int main(int argc, char **argv){
             //cout << "shouldn't happen EVER\n";
         }
         else if(pid>0){ // parent
-            // do nothing for now
             cout <<"Parent do nothing\n";
-            //close(client_sock);
         }
         else{ // fork failed
             perror("OMG FORK FAILED FOR CLIENT");
@@ -132,47 +127,36 @@ int main(int argc, char **argv){
 }
 
 int processClient(){
-    int sock=0; // THIS NO LONGER EXISTS should be writing everything to pipe, which is global (toDL/fromDL)
-    
     vector<string> empty;
-
-    string messageReceived=messageFromDL(fromDL[0]);
+    string messageReceived=messageFromDL(fromDL[0]); // receive login FIRST
         
-    // LOGIN
+    // Break up login message
     string cmd="";
     vector<string> arguments;
     parseMessage(messageReceived.c_str(), cmd, arguments);
     
-    
-    
+    // if they didn't send login, error
+    if(strcasecmp(cmd.c_str(),"0")!=0 || arguments.size()!=2){
+        sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
+        return 1;
+    }
     
     // Verifying credentials against "shadow" file
-    //if(verifyClient()){
-    if(1){
+    if(verifyClient(arguments[0], arguments[1])){
         //activeUser="GOES HERE"; // fill in
-        activeUser=""; // fill in
-
-        
-        //send "OK"
-        //size_t bytesSent=send(sock,to_string(MSG_OK).c_str(),sizeof(MSG_OK),0);
-        //if((int)bytesSent < sizeof(MSG_OK)){
-        //    perror("Sending to client:");
-        //    exit(1);
-        //}
+        activeUser=arguments[0]; // fill in
         
         vector<string> empty;
-        cout << "SENDING OK FOR LOGIN\n";
         sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
-        cout << "SENT OK FOR LOGIN\n";
-
         
         while(1){ // until logout
             // receive next command from client
             string line;
-            receiveCommand(line, sock);
+            receiveCommand(line);
             string cmd;
             vector<string> arguments;
             parseMessage(line.c_str(), cmd, arguments);
+            
            // logout
            if(strcasecmp(cmd.c_str(),"1")==0){
                 activeUser="";
@@ -183,6 +167,7 @@ int processClient(){
             }
             // put
             else if(strcasecmp(cmd.c_str(),"3")==0){
+                
                 sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
                 int retVal=receiveData(arguments,fromDL[0]);
                 
@@ -216,42 +201,18 @@ int processClient(){
         }
     }
     else{
-        //send failed
-        //Do we need to return 0 to the client and then exit(1) here?
-        return 0;
-    }
-    
-#ifdef DEBUG
-    //cout <<"Successful login\n";
-#endif
-    
+        // login failed
+        cout << "Login failed\n";
+        sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
+        string waitForResponse=messageFromDL(fromDL[0]);
+
+        return 1;
+    }    
     return 0;
 }
 
-void receiveCommand(string & line, int sock){
-   /*
-    //char msg[PACKET_SIZE];
-    //packet msg;
-    //memset(msg.data,0,PACKET_SIZE);
-    //size_t bytesRec=recv(sock,msg.data,PACKET_SIZE,0);
-    //msg.data[bytesRec]='\0';
-    
-    cout <<"Read to receive command from client\n";
-    
-    
-#ifdef DEBUG
-    cout <<"Received="<< msg.data<< " rec bytes=" << bytesRec << endl;
-#endif
-    if((int)bytesRec < 0){
-        perror("Receive from client");
-        cout<<"strerrno=" <<errno << endl;
-        exit(1);
-    }
-    line=string(msg.data);
-    */
+void receiveCommand(string & line){
     line=messageFromDL(fromDL[0]);
-//    int temp;
-  //  cin >> temp;
 }
 
 int serverSetup(){
@@ -295,39 +256,6 @@ int serverSetup(){
 
 }
 
-// Checks if user wishes to connected to server other than localhost
-void checkCommandLine(int argc, char **argv){
-    if(argc>1){
-        if(strcmp(argv[1],"-e")==0 && argc>=3){
-            errorRate=atoi(argv[2]);
-        }
-        else{
-            fprintf(stderr,"Usage: ./server -e [error]\n");
-            exit(1);
-        }
-    }
-}
-
-/*
-int verifyClient(int cmd, vector<string> userCredentials){
-    
-    string username=userCredentials[0];
-    string password=userCredentials[1];
-    
-    string returnedHash=getUserHash(username);
-    if(returnedHash==""){
-        return 0;
-    }
-    else{
-        string providedHash;//=sha256(password);
-        if(returnedHash==providedHash) return 1;
-        else return 0;
-    }
-    
-    return 1;
-    
-}
-
 string getUserHash(string username){
 	ifstream passwd("shadow", ios::in);
 	if(!passwd.is_open()){ cout << "Error: can't open shadow file\n"; exit(1);}
@@ -346,18 +274,52 @@ string getUserHash(string username){
 	return "";
 }
 
-void sha256(char *string, char outputBuffer[65])
-{
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, string, strlen(string));
-    SHA256_Final(hash, &sha256);
-    int i = 0;
-    for(i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    {
-        sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
+// Checks if user wishes to connected to server other than localhost
+void checkCommandLine(int argc, char **argv){
+    if(argc>1){
+        if(strcmp(argv[1],"-e")==0 && argc>=3){
+            errorRate=atoi(argv[2]);
+        }
+        else{
+            fprintf(stderr,"Usage: ./server -e [error]\n");
+            exit(1);
+        }
     }
-    outputBuffer[64] = 0;
 }
-*/
+
+string exec(char* cmd) {
+	FILE* pipe = popen(cmd, "r");
+	if (!pipe) return "ERROR";
+	char buffer[128];
+	string result = "";
+	while(!feof(pipe)) {
+		if(fgets(buffer, 128, pipe) != NULL)
+			result += buffer;
+	}
+	pclose(pipe);
+	return result;
+}
+
+int verifyClient(string username, string password){
+    string existingHash=getUserHash(username);
+    if(existingHash==""){
+        return 0;
+    }
+    
+    // FIXXXXXXXXXXXXXXX
+    //string command="echo " + password + ">out_"+convert.str() +" && cat out_" + convert.str() + " | sha256sum | cut -d \" \" -f 1";
+    ostringstream convert;
+    convert << getpid();
+    string command="echo " + password + ">out_"+convert.str() +" && cat out_" + convert.str() + " | shasum -a 256 | cut -d \" \" -f 1";
+    string providedHash=exec((char*)command.c_str());
+    //command="rm out_"+convert.str();
+    system(command.c_str());
+    providedHash[providedHash.length()-1]='\0';
+    if(strcmp(providedHash.c_str(),existingHash.c_str())==0){
+        return 1;
+    }
+    
+    return 0;
+}
+
+
