@@ -103,8 +103,12 @@ int receiveData(vector<string> arguments, int fromDL){
 //bytes, which fits into one packet.
 void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int signalFromDL){
     //string msg_buffer= START_DELIM + to_string(cmd);
-    string msg_buffer=to_string(cmd);
-
+    ostringstream convert;
+    
+    convert << cmd;
+    
+    //string msg_buffer=to_string(cmd);
+    string msg_buffer=convert.str();
     for(int i=0;i<parameters.size();i++){
         msg_buffer+= DELIM + parameters[i];
     }

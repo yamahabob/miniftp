@@ -10,6 +10,8 @@
 #define utilities
 
 #include <iostream>
+#include <sstream>
+#include <errno.h>
 
 
 void parseMessage(const char* msg, string & command,

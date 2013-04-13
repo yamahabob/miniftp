@@ -421,10 +421,12 @@ int fragment(char *stuffedPacket, frame rawFrames[MAX_FRAME_SPLIT], int size)
     int i=0;
     for(i=0;i<ceil(((float)len/PAYLOAD_SIZE));i++){
         memcpy(rawFrames[i].info,stuffedPacket+(i*PAYLOAD_SIZE),PAYLOAD_SIZE);
+        /*
         if(i==0){
         cout << "Data to be copied=" <<stuffedPacket+(i*PAYLOAD_SIZE) << endl;
         cout << "rawFrames[" <<i <<"].info=" << rawFrames[i].info+8 <<endl;
         }
+         */
     }
     return i;
 }
@@ -433,12 +435,15 @@ void bzzzzzzzuppp(frame *f){
     int randNum=rand()%101;
     //if(f->kind==ack)
         //cout << "CHECKING " << randNum << "<=" << errorRate <<endl;
+    
     if(0<=randNum && randNum<=errorRate){
+    /*
         //cout << "GOT ZAPPED with number=" << randNum <<endl;
         if(f->kind==ack)
             cout << "ACK FRAME " << f->ack <<" ZAPPED with number=" << randNum <<endl;
         else if(f->kind==data)
             cout << "DATA FRAME " << f->seq <<" ZAPPED with number=" << randNum <<endl;
+     */
         f->checkSum[0]=!f->checkSum[1];
     }
 }

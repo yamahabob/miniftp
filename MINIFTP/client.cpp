@@ -239,7 +239,7 @@ int checkNumArguments(int cmd, vector<string> arguments){
 
 int put(vector<string> arguments){
     ifstream fin;
-    fin.open(arguments[0],ios::in);
+    fin.open(arguments[0].c_str(),ios::in);
     if(!fin.is_open()){
         cout << "File " << arguments[0] << " failed to open" << endl;
         return 0;
@@ -268,7 +268,7 @@ int put(vector<string> arguments){
 
 int get(vector<string> arguments){
     ofstream fout;
-    fout.open(arguments[0],ios::out);
+    fout.open(arguments[0].c_str(),ios::out);
     if(!fout.is_open()){
         cout << "File " << arguments[0] << " failed to open" << endl;
         return 0;
