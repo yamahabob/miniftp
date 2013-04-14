@@ -158,26 +158,46 @@ int processClient(){
             parseMessage(line.c_str(), cmd, arguments);
             
            // logout
-           if(strcasecmp(cmd.c_str(),"1")==0){
+           if(atoi(cmd.c_str()) == MSG_LOGOUT){
                 activeUser="";
                 break;
             }
             // list
-            else if(strcasecmp(cmd.c_str(),"2")==0){
+            else if(atoi(cmd.c_str()) == MSG_LIST){
             }
             // put
-            else if(strcasecmp(cmd.c_str(),"3")==0){
+            else if(atoi(cmd.c_str()) == MSG_PUT){
+                /*
+                 echo y | rm test.c // returns line below
+                 rm: test.c: Operation not permitted
+                 chflags nouchg test.c
+                 echo y | rm test.c // has not return
+                 */
+                bool receive = true; //receive the file
+                if(access(arguments[0].c_str(), F_OK) != -1){ //exists?
+                    //file exists
+                    sendMessage(MSG_OVERWRITE,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                    string confirmationMsg = messageFromDL(fromDL[0]);
+                    parseMessage(confirmationMsg.c_str(), cmd, arguments);
+                    
+                    if(atoi(cmd.c_str()) == MSG_NO) //The user does not want to overwrite
+                        receive = false; //so don't receive the file
+                }
+                else{
+                    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
+                }
                 
-                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
-                int retVal=receiveData(arguments,fromDL[0]);
-                
-                if(retVal==0)
-                    cout << "Failed to received file\n";
-                else
-                    cout << "File received successfully\n";
+                if(receive){
+                    int retVal=receiveData(arguments,fromDL[0]);
+                    
+                    if(retVal==0)
+                        cout << "Failed to received file\n";
+                    else
+                        cout << "File received successfully\n";
+                }
             }
             // get
-            else if(strcasecmp(cmd.c_str(),"4")==0){
+            else if(atoi(cmd.c_str()) == MSG_GET){
                 sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
                 int retVal=sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
                 if(retVal==0)
@@ -187,16 +207,17 @@ int processClient(){
                 
             }
             // remove
-            else if(strcasecmp(cmd.c_str(),"5")==0){
+            else if(atoi(cmd.c_str()) == MSG_REMOVE){
             }
             // grant
-            else if(strcasecmp(cmd.c_str(),"6")==0){
+            else if(atoi(cmd.c_str()) == MSG_GRANT){
             }
             // revoke
-            else if(strcasecmp(cmd.c_str(),"7")==0){
+            else if(atoi(cmd.c_str()) == MSG_REVOKE){
             }
             else{
-                sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
+                cout << "Invalid command from " << activeUser <<endl;
+                sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // not valid command
             }
         }
     }
@@ -205,7 +226,6 @@ int processClient(){
         cout << "Login failed\n";
         sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
         string waitForResponse=messageFromDL(fromDL[0]);
-
         return 1;
     }    
     return 0;
@@ -251,9 +271,7 @@ int serverSetup(){
 		perror("Listen failed");
 		exit(1);
 	}
-    
     return sock;
-
 }
 
 string getUserHash(string username){

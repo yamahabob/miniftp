@@ -12,6 +12,7 @@
 #include <iostream>
 #include <sstream>
 #include <errno.h>
+#include <sys/time.h>
 
 
 void parseMessage(const char* msg, string & command,

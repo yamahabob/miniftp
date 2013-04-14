@@ -29,6 +29,7 @@ const char APP_DELIM=' ';
 //const char END_DELIM='E';
 
 typedef unsigned int seq_nr;
+typedef struct timeval timestruct;
 
 #define BUFFER_SIZE 100
 #define PAYLOAD_SIZE 100
@@ -52,6 +53,13 @@ typedef unsigned int seq_nr;
 #define MSG_DATA 99
 #define MSG_OK 21
 #define MSG_ERROR 22
+#define MSG_NO_EXIST 23
+#define MSG_IN_USE 24
+#define MSG_OVERWRITE 25
+#define MSG_USER_NO_EXIST 26
+
+#define MSG_NO 30
+#define MSG_YES 31
 
 struct packet{
     int dataSize;

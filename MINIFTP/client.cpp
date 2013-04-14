@@ -54,9 +54,11 @@ int main(int argc, char **argv){
             close(killDL[0]);
             //cout << "DATALINK PID=" << pid << endl;
             close(serverSock); // close communicating socket
-            if(login()==1){
-                exit_status=processCommands(toDL[1]); // if just logout->exit=0, if logout_exit->exit=1
-                // collect?
+            while(exit_status!=1){
+                if(login()==1){
+                    exit_status=processCommands(toDL[1]);// if just logout->exit=0, if logout_exit->exit=1
+                    // collect?
+                }
             }
             // KILL DATA LINK HERE!
             char kill='1';
@@ -154,9 +156,7 @@ int login(){
 
     sendMessage(MSG_LOGIN,parameters,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
     
-    cout << "waiting for response\n";
     string response=messageFromDL(fromDL[0]);
-    cout << "got response\n";
 
     
     string cmd;
@@ -178,7 +178,7 @@ int login(){
 
 int processCommands(int dl_fd){
     int exitstatus=0;
-    cin.ignore(MAX_MESSAGE_LEN, '\n');
+    //cin.ignore(MAX_MESSAGE_LEN, '\n');
     while(1){
         //string line;
         cout << "#>";
@@ -188,6 +188,10 @@ int processCommands(int dl_fd){
         
         string cmd;
         vector<string> arguments;
+        
+        timestruct before;
+        timestruct after;
+        timestruct result;
         
         parseUserMessage(line, cmd, arguments);
         
@@ -202,7 +206,9 @@ int processCommands(int dl_fd){
         }
         else if(strcasecmp(cmd.c_str(),"put")==0){
             // START TIMER
+            gettimeofday(&before, NULL);
             int retVal=put(arguments);
+            gettimeofday(&after, NULL);
             // END TIMER
 
             if(retVal==0)
@@ -213,14 +219,27 @@ int processCommands(int dl_fd){
         }
         else if(strcasecmp(cmd.c_str(),"get")==0){
             // START TIMER
+            gettimeofday(&before, NULL);
             int retVal=get(arguments);
             // END TIMER
+            gettimeofday(&after, NULL);
             if(retVal==0)
                 cout << "Failed to receive file\n";
             else
                 cout << "File received successfully\n";
         }
         else if(strcasecmp(cmd.c_str(),"remove")==0){
+            // START TIMER
+            gettimeofday(&before, NULL);
+            int retVal=remove(arguments);
+            // END TIMER
+            gettimeofday(&after, NULL);
+            /*
+            if(retVal==0)
+                cout << "Failed to remove file\n";
+            else
+                cout << "File received successfully\n";
+             */
         }
         else if(strcasecmp(cmd.c_str(),"grant")==0){
         }
@@ -231,11 +250,11 @@ int processCommands(int dl_fd){
             exitstatus=1;
             break;
         }else{
-            cout << "Command " << line << " INVALID" << endl;
-            cout << "enter val:";
-            int temp;
-            cin >>temp;
+            cout << "Command " << line << " INVALID -- Try again" << endl;
         }
+        
+        timeDiff(&result,&after,&before);
+        cout << "Command took " << result.tv_sec << " second(s) and " << ((result.tv_usec)/1000) << " millisecond(s) to process\n";
     }
     
     if(exitstatus==1)
@@ -265,13 +284,34 @@ int put(vector<string> arguments){
     parseMessage(response.c_str(), cmd, args);
     
     if(atoi(cmd.c_str())==MSG_OK){
-        cout << "Received OK. Sending data....\n";
+        cout << "Sending data to server....\n";
         //send file
         sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     }
+    else if(atoi(cmd.c_str())==MSG_OVERWRITE){
+        char ans;
+        do{
+        cout << "Filename exists -- Overwrite? (y/n) -->";
+        cin >>ans;
+        } while(ans!='y' && ans!='n' && ans!='Y' && ans!='N');
+        
+        if(ans=='y' || ans =='Y'){
+            sendMessage(MSG_YES, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+            sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+        }
+        else{
+            sendMessage(MSG_NO, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+            return 0;
+        }
+
+    }
+    else if(atoi(cmd.c_str())==MSG_IN_USE){
+        cout << "File in use -- Cannot overwrite. Try again later...\n";
+        return 0;
+    }
     else{
-        // discover error, print message
-        return 0; // for now, assuming we aren't doing overrides
+        cout << "Unknown error code returned\n";
+        return 0;
     }
     return 1;
 }
@@ -292,16 +332,85 @@ int get(vector<string> arguments){
     parseMessage(response.c_str(), cmd, args);
     
     if(atoi(cmd.c_str())==MSG_OK){
-        cout << "Received OK. Sending data....\n";
+        cout << "Receiving file from server....\n";
         receiveData(arguments,fromDL[0]);
-        //send file
+        return 1;
     }
-    else{
+    else if(atoi(cmd.c_str())==MSG_NO_EXIST){
         // discover error, print message
-        cout << "Get didn't get the OK!\n";
+        cout << "File does not exist on the server..\n";
         return 0; // for now, assuming we aren't doing overrides
     }
-    return 1;
+    else{
+        cout << "Unknown error code returned\n";
+        return 0;
+    }
 }
+
+int remove(vector<string> arguments){
+    if(arguments[0]==""){
+        cout << "No file name given for removal\n";
+        return 0;
+    }
+    
+    sendMessage(MSG_REMOVE, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+    string response=messageFromDL(fromDL[0]);
+    string cmd;
+    vector<string> args;
+    parseMessage(response.c_str(), cmd, args);
+    
+    if(atoi(cmd.c_str())==MSG_OK){
+        cout << "File removed from server...\n";
+        return 1;
+    }
+    else if(atoi(cmd.c_str())==MSG_NO_EXIST){
+        // discover error, print message
+        cout << "File does not exist on the server..\n";
+        return 0; 
+    }
+    else if(atoi(cmd.c_str())==MSG_IN_USE){
+        cout << "File in use -- Cannot remove. Try again later...\n";
+        return 0; 
+    }
+    else{
+        cout << "Unknown error code returned\n";
+        return 0;
+    }    
+}
+
+int grant(){}
+int revoke(){}
+
+
+
+
+
+
+
+
+int timeDiff(timestruct *result, timestruct *x, timestruct *y)
+{
+    /* Perform the carry for the later subtraction by updating y. */
+    if (x->tv_usec < y->tv_usec) {
+        int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+        y->tv_usec -= 1000000 * nsec;
+        y->tv_sec += nsec;
+    }
+    if (x->tv_usec - y->tv_usec > 1000000) {
+        int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+        y->tv_usec += 1000000 * nsec;
+        y->tv_sec -= nsec;
+    }
+    
+    /* Compute the time remaining to wait.
+     tv_usec is certainly positive. */
+    result->tv_sec = x->tv_sec - y->tv_sec;
+    result->tv_usec = x->tv_usec - y->tv_usec;
+    
+    /* Return 1 if result is negative. */
+    return x->tv_sec < y->tv_sec;
+}
+
+
 
 
