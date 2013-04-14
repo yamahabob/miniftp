@@ -16,6 +16,11 @@ int login();
 int put(vector<string> arguments);
 int get(vector<string> arguments);
 int remove(vector<string> arguments);
+int grant(vector<string>arguments);
 int timeDiff(timestruct *result, timestruct *x, timestruct *y);
+bool isValidArg(vector<string> arguments);
+void list(vector<string> arguments,string user);
+int checkNumArguments(string cmd, vector<string> arguments);
+int revoke(vector <string> arguments);
 
 #endif

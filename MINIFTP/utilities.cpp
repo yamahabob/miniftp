@@ -1,4 +1,3 @@
-//
 //  utilities.cpp
 //  MINIFTP
 //
@@ -37,7 +36,6 @@ void parseMessage(const char* msg, string & command,
 void parseUserMessage(char* msg, string & command,
                   vector<string> & arguments){
     char *tmp=strtok(msg," "); //get the first token, i.e. the command
-    //" and str now =" << str<< endl;
     if(tmp)
         command=string(tmp);
     
@@ -46,8 +44,7 @@ void parseUserMessage(char* msg, string & command,
         tmp = str2;
         
         if(tmp == NULL) //end of the message
-            break;
-        
+            break;        
         //copy the value to the returning list of arguments:
         arguments.push_back(string(str2));
     }
@@ -63,15 +60,10 @@ int sendData(int cmd, vector<string> parameters, int toDL, int fromDL, int signa
     }
     
     packet pack;
-    
-    int packetNum=0;
     while(!fin.eof()){
         memset(pack.data,'\0',PACKET_DATA_SIZE); // null ensures strlen works
-        
-        //fin.read(temp_msg_buffer.data,PACKET_SIZE-2); // worst case, only 1 packet and it will
         fin.read(pack.data,PACKET_DATA_SIZE-1);
         
-        // need both start and end DELIM
         int bytesRead=(int)fin.gcount(); // originally a long casted to int
         pack.dataSize = bytesRead;
         
@@ -81,9 +73,7 @@ int sendData(int cmd, vector<string> parameters, int toDL, int fromDL, int signa
             pack.last = 1;
             
         to_data_link(&pack, toDL, fromDL, signalFromDL);
-        packetNum++;
     }
-    //cout << "Number packets sent=" << packetNum <<endl;
     return 1;
 }
 
@@ -91,19 +81,15 @@ int receiveData(vector<string> arguments, int fromDL){
     ofstream fout;
     fout.open(arguments[0].c_str());
     if(!fout.is_open()){
-        // LOG
-        cerr << "Failed to open file\n";
+        cout << "Failed to open file\n";
         return 0;
     }
     
-    packet pack;
-    int packetNum=0;
-    
+    packet pack;    
     do{
         memset(pack.data,'\0',PACKET_DATA_SIZE); // null ensures strlen works
         
         int bytesRec=(int)read(fromDL,&pack,sizeof(packet));
-        //cout << "PACKET SIZE WRITTEN TO FILE=" <<pack.dataSize << endl;
 
         if(bytesRec<0){
             perror("Receive data from DL failed");
@@ -111,9 +97,6 @@ int receiveData(vector<string> arguments, int fromDL){
         pack.data[pack.dataSize]='\0';
         
         fout.write(pack.data,pack.dataSize);
-
-        //fout << string(pack.data);
-        packetNum++;
     } while(!pack.last);
     
     fout.close();
@@ -124,22 +107,16 @@ int receiveData(vector<string> arguments, int fromDL){
 // This function assumes that the size of a message is never greater than 184
 //bytes, which fits into one packet.
 void sendMessage(int cmd, vector<string> parameters, int toDL, int fromDL, int signalFromDL){
-    //string msg_buffer= START_DELIM + to_string(cmd);
     ostringstream convert;
-    
     convert << cmd;
     
-    //string msg_buffer=to_string(cmd);
     string msg_buffer=convert.str();
     for(int i=0;i<parameters.size();i++){
         msg_buffer+= APP_DELIM + parameters[i];
     }
     msg_buffer+= APP_DELIM;
-    //msg_buffer += END_DELIM;
-    //cout << "msg_buffer=\"" <<msg_buffer << "\" with size " << msg_buffer.length() << "\n";
 
     packet pack;
-    //strcpy(pack.data, data.c_str());
     memcpy(pack.data, msg_buffer.c_str(), PACKET_DATA_SIZE);
     pack.dataSize = (int)msg_buffer.length();
     pack.last = 1;
@@ -166,11 +143,7 @@ string messageFromDL(int fromDL){
     memcpy(message,packetReceived.data,packetReceived.dataSize);
     
     message[packetReceived.dataSize]='\0';
-
     
-    if(errno!=0){
-        cout << "errno set! -- " << errno << " with error:" << strerror(errno) << endl;
-    }
     return string(message);
 }
 

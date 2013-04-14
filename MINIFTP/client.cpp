@@ -95,7 +95,7 @@ void checkCommandLine(int argc, char **argv){
         }
     }
     else{
-        fprintf(stderr,"Usage: ./client [serverAddress] -r [error]\n");
+        fprintf(stderr,"Usage: ./client -a [serverAddress] -e [error]\n");
         exit(1);
     }
     //cout << "Error rate=" << errorRate << endl;
@@ -194,15 +194,39 @@ int processCommands(int dl_fd){
         timestruct result;
         
         parseUserMessage(line, cmd, arguments);
+        int correctNum=checkNumArguments(cmd, arguments);
+        
+        if(correctNum!=1){
+            cout << "Command " << line << " INVALID -- Try again" << endl;
+            continue;
+        }
         
         if(strcasecmp(cmd.c_str(),"login")==0){
             login(); // ignoring return value of login (1)
         }
         else if(strcasecmp(cmd.c_str(),"logout")==0){
+            sendMessage(MSG_LOGOUT,arguments,toDL[1], fromDL[0], signalFromDL[0]); // send login message to server
+            sleep(1); // 1 second for data link to send message
+            exitstatus=1;
             activeUser="";
             break;
         }
         else if(strcasecmp(cmd.c_str(),"list")==0){
+            gettimeofday(&before, NULL);
+            if (arguments.size() == 0){
+                list(arguments,activeUser);
+            }
+            else if (isValidArg(arguments))
+            {
+                list(arguments,activeUser);
+            }
+            else
+            {
+                cout << "Invalid arguments for list..."<<endl;
+                continue;
+            }
+            gettimeofday(&after, NULL);
+
         }
         else if(strcasecmp(cmd.c_str(),"put")==0){
             // START TIMER
@@ -226,15 +250,21 @@ int processCommands(int dl_fd){
             gettimeofday(&after, NULL);
         }
         else if(strcasecmp(cmd.c_str(),"grant")==0){
+            // START TIMER
+            gettimeofday(&before, NULL);
+            grant(arguments);
+            //grant()
+            // END TIMER
+            gettimeofday(&after, NULL);
         }
         else if(strcasecmp(cmd.c_str(),"revoke")==0){
-        }
-        else if(strcasecmp(cmd.c_str(),"exit")==0){
-            activeUser="";
-            exitstatus=1;
-            break;
+            // START TIMER
+            gettimeofday(&before, NULL);
+            revoke(arguments);
+            // END TIMER
+            gettimeofday(&after, NULL);
         }else{
-            cout << "Command " << line << " INVALID -- Try again" << endl;
+            cout << "!Command " << line << " INVALID -- Try again¡" << endl;
         }
         
         timeDiff(&result,&after,&before);
@@ -268,7 +298,7 @@ int put(vector<string> arguments){
     parseMessage(response.c_str(), cmd, args);
     
     if(atoi(cmd.c_str())==MSG_OK){
-        cout << "Sending data to server....\n";
+        cout << "Sending data to server...\n";
         //send file
         sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     }
@@ -322,7 +352,7 @@ int get(vector<string> arguments){
     }
     else if(atoi(cmd.c_str())==MSG_NO_EXIST){
         // discover error, print message
-        cout << "File does not exist on the server..\n";
+        cout << "File does not exist on the server...\n";
         return 0; // for now, assuming we aren't doing overrides
     }
     else{
@@ -331,12 +361,7 @@ int get(vector<string> arguments){
     }
 }
 
-int remove(vector<string> arguments){
-    if(arguments[0]==""){
-        cout << "No file name given for removal\n";
-        return 0;
-    }
-    
+int remove(vector<string> arguments){    
     sendMessage(MSG_REMOVE, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     string response=messageFromDL(fromDL[0]);
     string cmd;
@@ -349,7 +374,7 @@ int remove(vector<string> arguments){
     }
     else if(atoi(cmd.c_str())==MSG_NO_EXIST){
         // discover error, print message
-        cout << "File does not exist on the server..\n";
+        cout << "File does not exist on the server...\n";
         return 0; 
     }
     else if(atoi(cmd.c_str())==MSG_IN_USE){
@@ -362,15 +387,60 @@ int remove(vector<string> arguments){
     }    
 }
 
-int grant(){}
-int revoke(){}
+int grant(vector<string>arguments){
+    sendMessage(MSG_GRANT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+    string response=messageFromDL(fromDL[0]);
+    string cmd;
+    vector<string> args;
+    parseMessage(response.c_str(), cmd, args);
+    
+    if(atoi(cmd.c_str())==MSG_OK){
+        cout << "File shared...\n";
+        return 1;
+    }
+    else if(atoi(cmd.c_str())==MSG_USER_NO_EXIST){
+        // discover error, print message
+        cout << "User does not exist...\n";
+        return 0;
+    }
+    else if(atoi(cmd.c_str())==MSG_NO_EXIST){
+        cout << "File for sharing does not exist...\n";
+        return 0;
+    }
+    else{
+        cout << "Unknown error code returned\n";
+        return 0;
+    }
 
-
-
-
-
-
-
+    return 1;
+}
+int revoke(vector <string> arguments){
+    sendMessage(MSG_REVOKE, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+    string response=messageFromDL(fromDL[0]);
+    string cmd;
+    vector<string> args;
+    parseMessage(response.c_str(), cmd, args);
+    
+    if(atoi(cmd.c_str())==MSG_OK){
+        cout << "Share access revoked...\n";
+        return 1;
+    }
+    else if(atoi(cmd.c_str())==MSG_USER_NO_EXIST){
+        // discover error, print message
+        cout << "User does not exist...\n";
+        return 0;
+    }
+    else if(atoi(cmd.c_str())==MSG_NO_EXIST){
+        cout << "File not shared...\n";
+        return 0;
+    }
+    else{
+        cout << "Unknown error code returned\n";
+        return 0;
+    }
+    
+    return 1;
+}
 
 int timeDiff(timestruct *result, timestruct *x, timestruct *y)
 {
@@ -380,6 +450,7 @@ int timeDiff(timestruct *result, timestruct *x, timestruct *y)
         y->tv_usec -= 1000000 * nsec;
         y->tv_sec += nsec;
     }
+    
     if (x->tv_usec - y->tv_usec > 1000000) {
         int nsec = (x->tv_usec - y->tv_usec) / 1000000;
         y->tv_usec += 1000000 * nsec;
@@ -395,6 +466,82 @@ int timeDiff(timestruct *result, timestruct *x, timestruct *y)
     return x->tv_sec < y->tv_sec;
 }
 
+bool isValidArg(vector<string> arguments)
+{
+    if(arguments.size() == 1 && (arguments[0].compare("-d") == 0 || arguments[0].compare("-s")==0 || arguments[0].compare("-o")==0))
+        return true;
+    else if(arguments.size() == 2 && arguments[0].compare("-t")==0){
+        return true;
+    }
 
+    return false;
+}
 
+void list(vector<string> arguments,string user)
+{
+    sendMessage(MSG_LIST, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+    vector<string> filename;
+    string f = "ctemp"+activeUser+".txt";
+    string removefile = "rm "+f;
+    filename.push_back(f);
+    char listfiles[200];
+    int retVal=receiveData(filename,fromDL[0]);
+    
+    if(retVal==0){
+        cout << "Error in receiving..\n";
+    }
+    else{
+        ifstream fin;
+        fin.open(f.c_str(),ios::in);
+        
+        if(!fin.is_open()){
+			return;
+        }
+        while(!fin.eof())
+        {
+            memset(listfiles,'\0',200);
+            fin.read(listfiles,199);
+            cout << listfiles;
+        }
+        fin.close();
+        system(removefile.c_str());
+    }
+    
+}
+
+int checkNumArguments(string cmd, vector<string> arguments){
+    // switch statement to check number of arguments based on cmd
+    int isvalid = 0;
+    //cout << cmd <<endl;
+    //cout << arguments.size() <<endl;
+    if (arguments.size()==0)
+    {
+        if (strcasecmp(cmd.c_str(),"logout")==0 || strcasecmp(cmd.c_str(),"list")==0)
+        {
+            isvalid =1;
+        }
+    }
+    else if (arguments.size()==1)
+    {
+        //cout << "arg ---2 "<<endl ;
+        if (strcasecmp(cmd.c_str(),"login")==0 || strcasecmp(cmd.c_str(),"put")==0||cmd.compare("get")==0 ||strcasecmp(cmd.c_str(),"remove")==0||cmd.compare("list")==0)
+        {
+            //cout << arguments[0] <<endl;
+            //if (arguments[0].find(".") != string::npos )
+            //{
+                isvalid = 1;
+            //}
+            
+        }
+    }
+    else if (arguments.size()==2)
+    {
+        if ( cmd.compare("grant")==0 || cmd.compare("revoke")==0 || cmd.compare("list")==0)
+        {
+            isvalid = 1;
+        }
+    }
+	
+    return isvalid;
+}
 

@@ -51,14 +51,15 @@ int main(int argc, char **argv){
         int pid2;
         while((pid2=wait4(-1,&status,WNOHANG,&rusage)>0)){
             //cout << "reaped childID=" <<pid2 <<endl;
-        }//cout <<"in while pid2="<<pid2<<endl;}
+        }
         
-        cout <<"sitting on accept\n";
 		client_sock = accept(sock, (struct sockaddr *)&client, &sin_size);
 		if (client_sock == -1) {
 			perror("error accept");
 			exit(1);
 		}
+        
+        cout << "Accepted new client" <<endl;
         
         int pid;
         if((pid=fork())==0){//child process
@@ -117,7 +118,7 @@ int main(int argc, char **argv){
             //cout << "shouldn't happen EVER\n";
         }
         else if(pid>0){ // parent
-            cout <<"Parent do nothing\n";
+            //cout <<"Parent do nothing\n";
         }
         else{ // fork failed
             perror("OMG FORK FAILED FOR CLIENT");
@@ -143,7 +144,6 @@ int processClient(){
     
     // Verifying credentials against "shadow" file
     if(verifyClient(arguments[0], arguments[1])){
-        //activeUser="GOES HERE"; // fill in
         activeUser=arguments[0]; // fill in
         
         vector<string> empty;
@@ -164,6 +164,8 @@ int processClient(){
             }
             // list
             else if(atoi(cmd.c_str()) == MSG_LIST){
+                //cout<<"listing files for user " << activeUser << endl;
+                listfiles(arguments,activeUser);
             }
             // put
             else if(atoi(cmd.c_str()) == MSG_PUT){
@@ -174,7 +176,8 @@ int processClient(){
                  echo y | rm test.c // has not return
                  */
                 bool receive = true; //receive the file
-                if(access(arguments[0].c_str(), F_OK) != -1){ //file exists?
+                string filename=activeUser+"/"+arguments[0];
+                if(access(filename.c_str(), F_OK) != -1){ //file exists?
                     //file exists
                     sendMessage(MSG_OVERWRITE,empty,toDL[1], fromDL[0], signalFromDL[0]);
                     string confirmationMsg = messageFromDL(fromDL[0]);
@@ -188,6 +191,7 @@ int processClient(){
                 }
                 
                 if(receive){
+                    arguments[0]=filename;
                     int retVal=receiveData(arguments,fromDL[0]);
                     
                     if(retVal==0)
@@ -198,7 +202,10 @@ int processClient(){
             }
             // get
             else if(atoi(cmd.c_str()) == MSG_GET){
-                if(access(arguments[0].c_str(), F_OK) != -1){ //file exists?
+                string filename=activeUser+"/"+arguments[0];
+                arguments[0]=filename;
+                cout << "file to GET=" << filename <<endl;
+                if(access(filename.c_str(), F_OK) != -1){ //file exists?
                     sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
                     int retVal=sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
                     if(retVal==0)
@@ -225,9 +232,11 @@ int processClient(){
             }
             // grant
             else if(atoi(cmd.c_str()) == MSG_GRANT){
+                grant(arguments);
             }
             // revoke
             else if(atoi(cmd.c_str()) == MSG_REVOKE){
+                 revoke(arguments);
             }
             else{
                 cout << "Invalid command from " << activeUser <<endl;
@@ -237,7 +246,7 @@ int processClient(){
     }
     else{
         // login failed
-        cout << "Login failed\n";
+        cout << "Login failed for " << arguments[0] <<endl;
         sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
         string waitForResponse=messageFromDL(fromDL[0]);
         return 1;
@@ -273,14 +282,12 @@ int serverSetup(){
 	}
     
 	// bind it to the port we passed in to getaddrinfo():
-    
-	if(bind(sock, (const struct sockaddr*)res->ai_addr, res->ai_addrlen)==-1){
+    if(bind(sock, (const struct sockaddr*)res->ai_addr, res->ai_addrlen)==-1){
 		close(sock);
 		perror("Bind failed");
 		exit(1);
 	}
      
-    
 	if(listen(sock, 5) == -1){
 		perror("Listen failed");
 		exit(1);
@@ -353,5 +360,144 @@ int verifyClient(string username, string password){
     
     return 0;
 }
+
+void listfiles(vector<string> arguments, string user)
+{
+    string command;
+    string listOfFiles;
+    string listofFiles;
+    ofstream fout;
+    vector<string> filename;
+    string f = "stemp"+user+".txt";
+    string removefile = "rm "+f;
+    fout.open(f.c_str());
+    
+    if(arguments.size()==0)
+    {
+        command= "ls "+user;
+        listOfFiles=exec((char*)command.c_str());
+        cout << "listoffiles for ls -->" << listOfFiles <<endl;
+    }
+    else if(arguments[0].compare("-d") == 0)
+    {
+        command= "du -sk ./"+user +"/*";
+        listOfFiles=exec((char*)command.c_str());
+    }
+    else if(arguments[0].compare("-o") == 0)
+    {
+        cout << "list -o";
+        listOfFiles= list(arguments,user);
+    }
+    else if (arguments.size() == 2 || arguments[0].compare("-t") == 0)
+    {
+        cout << "inside -t";
+        listOfFiles= list(arguments,user);
+    }
+    
+    
+    fout.write(listOfFiles.c_str(),listOfFiles.size());
+    fout.close();
+    
+    filename.push_back(f.c_str());
+    sendData(MSG_PUT, filename, toDL[1], fromDL[0], signalFromDL[0]);
+    system(removefile.c_str());
+}
+
+string list(vector<string> arguments,string dir)
+{
+    string listoffiles;
+    DIR *dirp = opendir( dir.c_str() );
+    if ( dirp != NULL){
+        struct dirent *dp = 0;
+        if(arguments.size() ==2){
+            arguments[1].insert(0,".");
+            while ( (dp = readdir( dirp )) != 0 ){
+                struct stat file;
+                stat( dp->d_name, &file);    
+                if(strstr(dp->d_name,arguments[1].c_str()) >  0){
+                    listoffiles += dp->d_name;
+                    listoffiles += "\n";
+                }
+                listoffiles += "\0";
+            }
+        }
+        else{
+            while ( (dp = readdir( dirp )) != 0 ){
+                if(dp->d_type == DT_LNK){
+                    listoffiles += dp->d_name;
+                    listoffiles += "\n";
+                }
+            }
+            listoffiles[listoffiles.size()] = '\0';
+        }
+    }
+    return listoffiles;
+}
+
+int grant(vector<string>arguments){
+    
+    string userReceivingFile=arguments[0];
+    string originalFile=arguments[1];
+    string filename=activeUser+"/"+arguments[1];
+    
+    
+    vector <string> empty;
+    
+    if(getUserHash(userReceivingFile)==""){
+        // user doesn't exist
+        sendMessage(MSG_USER_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        return 0;
+    }
+    else if(access(filename.c_str(), F_OK) == -1){
+        // file doesn't exist
+        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        return 0;
+
+    }
+    
+
+    string command="cd " + userReceivingFile + " && ln -s ../" + filename + " shared:" +activeUser + ":" + originalFile;
+    cout << "command=" << command <<endl;
+    string ret=exec((char*)command.c_str());
+    cout << "ret=" << ret <<endl;
+    
+    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
+    
+    return 1;
+}
+
+int revoke(vector<string>arguments){
+    
+    string userReceivingFile=arguments[0];
+    string filename=activeUser+"/"+arguments[1];
+    string originalFile=arguments[1];
+    string fileToRemove=userReceivingFile + "/shared:" +activeUser + ":" + originalFile;
+    cout << "to remove="<< fileToRemove <<endl;
+    
+    vector <string> empty;
+    
+    if(getUserHash(userReceivingFile)==""){
+        // user doesn't exist
+        sendMessage(MSG_USER_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        return 0;
+    }
+    else if(access(fileToRemove.c_str(), F_OK) == -1){
+        // file doesn't exist
+        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        return 0;
+        
+    }
+    
+    string command="rm " + fileToRemove;
+    cout << command << endl;
+    string ret=exec((char*)command.c_str());
+    cout << "ret=" << ret <<endl;
+    
+    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
+    
+    return 1;
+}
+    
+
 
 
