@@ -178,7 +178,7 @@ int login(){
 
 int processCommands(int dl_fd){
     int exitstatus=0;
-    //cin.ignore(MAX_MESSAGE_LEN, '\n');
+    cin.ignore(MAX_MESSAGE_LEN, '\n');
     while(1){
         //string line;
         cout << "#>";
@@ -207,39 +207,23 @@ int processCommands(int dl_fd){
         else if(strcasecmp(cmd.c_str(),"put")==0){
             // START TIMER
             gettimeofday(&before, NULL);
-            int retVal=put(arguments);
+            put(arguments);
             gettimeofday(&after, NULL);
             // END TIMER
-
-            if(retVal==0)
-                cout << "Failed to transmit file\n";
-            else
-                cout << "File transmitted successfully\n";
-            
         }
         else if(strcasecmp(cmd.c_str(),"get")==0){
             // START TIMER
             gettimeofday(&before, NULL);
-            int retVal=get(arguments);
+            get(arguments);
             // END TIMER
             gettimeofday(&after, NULL);
-            if(retVal==0)
-                cout << "Failed to receive file\n";
-            else
-                cout << "File received successfully\n";
         }
         else if(strcasecmp(cmd.c_str(),"remove")==0){
             // START TIMER
             gettimeofday(&before, NULL);
-            int retVal=remove(arguments);
+            remove(arguments);
             // END TIMER
             gettimeofday(&after, NULL);
-            /*
-            if(retVal==0)
-                cout << "Failed to remove file\n";
-            else
-                cout << "File received successfully\n";
-             */
         }
         else if(strcasecmp(cmd.c_str(),"grant")==0){
         }

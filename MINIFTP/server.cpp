@@ -174,7 +174,7 @@ int processClient(){
                  echo y | rm test.c // has not return
                  */
                 bool receive = true; //receive the file
-                if(access(arguments[0].c_str(), F_OK) != -1){ //exists?
+                if(access(arguments[0].c_str(), F_OK) != -1){ //file exists?
                     //file exists
                     sendMessage(MSG_OVERWRITE,empty,toDL[1], fromDL[0], signalFromDL[0]);
                     string confirmationMsg = messageFromDL(fromDL[0]);
@@ -198,16 +198,30 @@ int processClient(){
             }
             // get
             else if(atoi(cmd.c_str()) == MSG_GET){
-                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
-                int retVal=sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
-                if(retVal==0)
-                    cout << "Failed to send file\n";
-                else
-                    cout << "File sent successfully\n";
+                if(access(arguments[0].c_str(), F_OK) != -1){ //file exists?
+                    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                    int retVal=sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+                    if(retVal==0)
+                        cout << "Failed to send file\n";
+                    else
+                        cout << "File sent successfully\n";
+                }
+                else{
+                    //tell the client that the file does not exist.
+                    sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                }
                 
             }
             // remove
             else if(atoi(cmd.c_str()) == MSG_REMOVE){
+                if(access(arguments[0].c_str(), F_OK) != -1){ //file exists?
+                    remove(arguments[0].c_str());
+                    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                }
+                else{
+                    //tell the client that the file does not exist.
+                    sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                }
             }
             // grant
             else if(atoi(cmd.c_str()) == MSG_GRANT){
