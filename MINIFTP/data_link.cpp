@@ -125,7 +125,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                         // SEND ACK FOR THIS FRAME
                         sendAck(&r,sock);
                     }
-                    else if(r.kind==data && between(lastSuccessful,r.ack,frame_expected)){
+                    else if(r.kind==data && between(lastSuccessful,r.seq,frame_expected)){
                         numDupFrameRec++;
                         sendAck(&r,sock);
                     }
