@@ -18,12 +18,12 @@ typedef enum{frame_arrival, timeout, network_layer_ready, dl_die} event_type;
 typedef enum{data,ack} frame_kind;
 
 typedef struct{
-    frame_kind kind;
-    seq_nr seq;
-    seq_nr ack;
-    char info[PAYLOAD_SIZE];
-    int remaining;
-    char checkSum[2];
+	    frame_kind kind;
+		    seq_nr seq;
+			    seq_nr ack;
+				    char info[PAYLOAD_SIZE];
+					    char checkSum[2];
+						    int remaining;
 } frame;
 
 extern int toDL[2];
@@ -67,7 +67,7 @@ void protocol5(int type, int sock); //removed network_fd see .cpp file
 static bool between(seq_nr a, seq_nr b, seq_nr c);
 int byteStuff(char *input, char *output);
 void deStuff(vector <frame> partialPackets, packet *p);
-int checksum(char *input, char result[CHECK_SUM_LENGTH]);
+int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]);
 int makeFrame(packet packetData, frame framesArr[MAX_FRAME_SPLIT]);
 void bzzzzzzzuppp(frame *f);
 int checksumFrame(frame f);
