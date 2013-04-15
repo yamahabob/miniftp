@@ -139,8 +139,9 @@ void printQueue(eventEntry* head){
     }
     else{ //the list is not empty
         eventEntry* ptr = head;
+        cout << "QUEUE: ";
         while(ptr != NULL){ //traverse the list
-            cout << "QUEUE: " << ptr->seqNum << " ";
+            cout << ptr->seqNum << "-->";
             ptr=ptr->next;
         }
         cout << endl;
