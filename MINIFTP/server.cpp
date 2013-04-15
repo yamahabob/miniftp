@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <openssl/sha.h>
 #include <sstream>
+#include <semaphore.h>
 
 #include "header.h"
 #include "server.h"
