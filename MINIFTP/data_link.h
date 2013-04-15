@@ -18,12 +18,12 @@ typedef enum{frame_arrival, timeout, network_layer_ready, dl_die} event_type;
 typedef enum{data,ack} frame_kind;
 
 typedef struct{
-	    frame_kind kind;
-		    seq_nr seq;
-			    seq_nr ack;
-				    char info[PAYLOAD_SIZE];
-					    char checkSum[2];
-						    int remaining;
+    frame_kind kind;
+    seq_nr seq;
+    seq_nr ack;
+    char info[PAYLOAD_SIZE];
+    char checkSum[2];
+    int remaining;
 } frame;
 
 extern int toDL[2];
