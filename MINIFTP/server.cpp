@@ -549,6 +549,8 @@ int get(string cmd, vector<string> arguments){
             size_t current=0;
             size_t next =-1;
             next=originalFilename.find_first_of(delimiters,current);
+            current=next;
+            next=originalFilename.find_first_of(delimiters,current);
             string owner=originalFilename.substr(current,next-current);
             
             sem_wait(&ptr->mutex);
