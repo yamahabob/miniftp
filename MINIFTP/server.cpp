@@ -667,17 +667,6 @@ int removeFile(vector<string> arguments){
     string fName;
     
     if(access(filename.c_str(), F_OK) != -1){ //file exists?
-        string delimiters = ":";
-        size_t current=0;
-        size_t next =-1;
-        next=originalFilename.find_first_of(delimiters,current);
-        current=next;
-        next=originalFilename.find_first_of(delimiters,current);
-        string owner=originalFilename.substr(current,next-current);
-        current=next;
-        next=originalFilename.find_first_of(delimiters,current);
-        string fname=originalFilename.substr(current,next-current);
-        
         //file exists
         if(isLink((char*)filename.c_str()) || !(is_shared(originalFilename.c_str()))){
             remove(filename.c_str());
@@ -689,9 +678,9 @@ int removeFile(vector<string> arguments){
             sem_wait(&ptr->mutex);
             cout << "got mutex\n";
             // ORIGINAL FILE NAME CORRECT?
-            if(readAccess((char*)owner.c_str(), (char *)fname.c_str())==no_access){
-                cout << "readAccess for " << filename << "=" << readAccess((char*)owner.c_str(), (char *)fname.c_str()) <<endl;
-                writeAccess((char*)activeUser.c_str(),(char*)owner.c_str(), (char*)fname.c_str(),write_access);
+            if(readAccess((char*)activeUser.c_str(), (char *)originalFilename.c_str())==no_access){
+                cout << "readAccess for " << filename << "=" << readAccess((char*)activeUser.c_str(), (char *)originalFilename.c_str()) <<endl;
+                writeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)originalFilename.c_str(),write_access);
                 sem_post(&ptr->mutex);
                 cout << "mutex down\n";
 
@@ -712,7 +701,7 @@ int removeFile(vector<string> arguments){
                 // grab lock
                 sem_wait(&ptr->mutex);
                 // remove access
-                removeAccess((char*)activeUser.c_str(),(char*)owner.c_str(), (char*)fname.c_str());
+                removeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)originalFilename.c_str());
                 //release lock
                 sem_post(&ptr->mutex);
                 
