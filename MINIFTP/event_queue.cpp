@@ -1,16 +1,8 @@
 //
 //  event_queue.cpp
 //  MINIFTP
-//
-//  Created by Curtis Taylor on 4/4/13.
-//  Copyright (c) 2013 WPI. All rights reserved.
-//
-//  LDatabase.c
-//  LocationServer
-//
-//  Created by Salman Saghafi on 1/30/13.
-//  Copyright (c) 2013 WPI. All rights reserved.
-//
+//  CS513-TEAM2
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

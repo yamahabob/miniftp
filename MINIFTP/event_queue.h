@@ -1,10 +1,7 @@
 //
 //  event_queue.h
 //  MINIFTP
-//
-//  Created by Curtis Taylor on 4/4/13.
-//  Copyright (c) 2013 WPI. All rights reserved.
-//
+//  CS513-TEAM2
 
 #ifndef __MINIFTP__event_queue__
 #define __MINIFTP__event_queue__
@@ -20,11 +17,16 @@ typedef struct eventEntry{
 } eventEntry;
 
 
+//Primary Author: Salman
 int add_eventEntry(eventEntry* head, seq_nr seqNum, int timestamp ,eventEntry** newHead);
 
+//Primary Author: Salman
 int remove_byTime(eventEntry* head, eventEntry** newHead, int curTime);
 
+//Primary Author: Salman
 int remove_bySeq(eventEntry* head, eventEntry** newHead, seq_nr seqNum);
+
+//Primary Author: Salman
 void printQueue(eventEntry* head);
 
 

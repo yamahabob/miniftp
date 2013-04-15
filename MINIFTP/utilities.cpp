@@ -1,9 +1,6 @@
-//  utilities.cpp
-//  MINIFTP
-//
-//  Created by Curtis Taylor on 3/19/13.
-//  Copyright (c) 2013 WPI. All rights reserved.
-//
+// utilities.cpp
+// MINIFTP
+// CS513-TEAM2
 
 #include "header.h"
 #include "utilities.h"

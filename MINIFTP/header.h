@@ -1,3 +1,9 @@
+//
+// header.h
+// MINIFTP
+// CS513-TEAM2
+
+
 #ifndef header_h
 #define header_h
 
@@ -67,10 +73,15 @@ struct packet{
     char data[PACKET_DATA_SIZE]; //tan has this as unsigned char[]
 };
 
+//Primary Author: Salman
 void parseMessage(const char* msg, string & command, vector<string> & arguments);
+//Primary Author: Curtis
 int checkNumArguments(int cmd, vector<string> arguments);
+//Primary Author: Curtis
 int sendData(int cmd, vector<string> parameters, int sock);
+//Primary Author: Curtis
 int receiveData(vector<string> arguments, int sock);
+//Primary Author: Curtis
 void sendMessage(int cmd, vector<string> parameters, int sock);
 
 #endif

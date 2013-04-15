@@ -1,6 +1,8 @@
-/* Team 2
- CS513
- */
+//
+// server.cpp
+// MINIFTP
+// CS513-TEAM2
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

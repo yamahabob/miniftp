@@ -1,6 +1,8 @@
-/* Team 2
-   CS513
-*/
+//
+//client.cpp
+//MINIFTP
+//CS513-TEAM2
+
 #include "header.h" // shared functions/variables between server/client
 #include "client.h" // relative only to client
 #include "data_link.h"
