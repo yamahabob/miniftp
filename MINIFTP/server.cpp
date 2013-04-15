@@ -717,7 +717,7 @@ int writeAccess(char * user, char *owner, char *fileName, access_types type){
     record.type = type;
     
     ofstream fout;
-    fout.open("access.tmp", fstream::app);
+    fout.open("access.tmp", ios::app);
     if(!fout.is_open()){
         cout << "Failed to open file\n";
         return 0;
@@ -803,15 +803,15 @@ int removeAccess(char *user, char *owner, char *fileName){
 
 void addInSharedDB(string fname, string uname )
 {
-	string file = activeUser+"/"+"sharedFileList.db";
+	string file = activeUser+"/sharedFileList.db";
 	if ( !isduplicate (fname,uname))
 	{
         ofstream fout;
 		struct shared_file sfile_record;
 		
-		fout.open(file.c_str(),fstream::app);
+		fout.open(file.c_str(),ios::app);
 		if(!fout.is_open()){
-			cout << "failed to open file" <<endl;
+			cout << "failed to open file" << file <<endl;
 			return;
 		}
 		
@@ -842,7 +842,7 @@ bool isduplicate( string fname, string uname )
     
     
     if(!fin.is_open()){
-        cout << "failed to open file" <<endl;
+        cout << "(isdup)failed to open file " <<endl;
     }else
     {
         while(!fin.eof())
@@ -869,7 +869,7 @@ vector<string> returnUserList(string fname)
     vector<string> userList;
     
     if(!fin.is_open()){
-        cout << "failed to open file " << f <<endl;
+        cout << "return userlist failed to open file -- " << f <<endl;
         return userList;
     }
     while(!fin.eof())
