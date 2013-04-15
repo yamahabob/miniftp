@@ -619,7 +619,8 @@ int revoke(vector<string>arguments){
     string command="rm " + fileToRemove;
     //cout << command << endl;
     string ret=exec((char*)command.c_str());
-    //cout << "ret=" << ret <<endl;
+    
+    removeAfterRevoke(userReceivingFile, originalFile);
     
     sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
     
