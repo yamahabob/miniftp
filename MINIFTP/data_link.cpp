@@ -481,13 +481,13 @@ void log(int type){
     string msg_buffer=convert.str();
     if(type==0) {// server
         ofstream fout;
-        string filename="serverLog_"+convert.str()+".txt";
+        string filename="logs/serverLog_"+convert.str()+".txt";
         fout.open(filename.c_str());
         if(!fout.is_open()){
             cerr << "Failed to open file\n";
         }
         else{
-            fout << "SERVER LOG -- TIME" << time(NULL) <<endl <<endl;
+            fout << "SERVER LOG -- TIMESTAMP " << time(NULL) <<endl <<endl;
             fout << "1. Total number of data frames sent - " << numFramesSent <<endl;
             fout << "2. Total number of retransmissions sent - " << numReTrans <<endl;
             fout << "3. Total number of acknowledgments sent - " << numAckSent <<endl;
@@ -503,13 +503,13 @@ void log(int type){
     }
     else if(type==1){
         ofstream fout;
-        string filename="clientLog_"+convert.str()+".txt";
+        string filename="logs/clientLog_"+convert.str()+".txt";
         fout.open(filename.c_str());
         if(!fout.is_open()){
             cerr << "Failed to open file\n";
         }
         else{
-            fout << "CLIENT LOG -- TIME" << time(NULL) <<endl <<endl;
+            fout << "CLIENT LOG -- TIMESTAMP " << time(NULL) <<endl <<endl;
             fout << "1. Total number of data frames sent - " << numFramesSent <<endl;
             fout << "2. Total number of retransmissions sent - " << numReTrans <<endl;
             fout << "3. Total number of acknowledgments sent - " << numAckSent <<endl;

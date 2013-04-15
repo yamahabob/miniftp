@@ -311,6 +311,7 @@ int put(vector<string> arguments){
         
         if(ans=='y' || ans =='Y'){
             sendMessage(MSG_YES, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+            cout << "Sending data to server...\n";
             sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
         }
         else{

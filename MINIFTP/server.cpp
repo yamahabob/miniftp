@@ -343,14 +343,14 @@ int verifyClient(string username, string password){
         return 0;
     }
     
-    // FIXXXXXXXXXXXXXXX
-    //string command="echo " + password + ">out_"+convert.str() +" && cat out_" + convert.str() + " | sha256sum | cut -d \" \" -f 1";
     ostringstream convert;
     convert << getpid();
     string command="echo " + password + ">out_"+convert.str() +" && cat out_" + convert.str() + " | shasum -a 256 | cut -d \" \" -f 1";
     string providedHash=exec((char*)command.c_str());
     //command="rm out_"+convert.str();
     system(command.c_str());
+    command="out_"+convert.str();
+    remove(command.c_str());
     providedHash[providedHash.length()-1]='\0';
     if(strcmp(providedHash.c_str(),existingHash.c_str())==0){
         return 1;
