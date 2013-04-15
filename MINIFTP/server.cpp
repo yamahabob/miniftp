@@ -46,6 +46,8 @@ int main(int argc, char **argv){
     checkCommandLine(argc, argv);
     int sock=serverSetup();
     srand((int)time(NULL));
+    string access="access.tmp";
+    remove(access.c_str());
     
     /*8888888888*/
     int fd;
@@ -553,6 +555,8 @@ int get(string cmd, vector<string> arguments){
             if(readAccess((char*)originalFilename.c_str(), (char*)filename.c_str())!=write_access){
                 cout << "Adding read access to file\n";
                 writeAccess((char*)activeUser.c_str(),(char*)owner.c_str(), (char*)filename.c_str(),read_access);
+                cout << "owner=" << owner << " and filename=" << filename <<endl;
+                cout << "immedately after adding, the status is =" << readAccess((char*)owner.c_str(), (char *)filename.c_str()) <<endl;
                 sem_post(&ptr->mutex);
             }
             else{
