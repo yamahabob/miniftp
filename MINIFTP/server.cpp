@@ -1,6 +1,6 @@
 /* Team 2
-   CS513
-*/
+ CS513
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,7 +49,7 @@ int main(int argc, char **argv){
     
     /*8888888888*/
     int fd;
-
+    
     
     //shared.master=fopen("master.txt","a+");
     //if(!shared.master)
@@ -74,22 +74,22 @@ int main(int argc, char **argv){
     //sem_post(&ptr->mutex);
     
     /*8888888888*/
-
+    
     
     
 	printf("Now accepting connections\n");
-
+    
 	int client_sock;
 	struct sockaddr_storage client;
 	socklen_t sin_size;
-
-
+    
+    
 	while(1){ // really only once
 		sin_size = sizeof client;
         // collect returning children here
         struct rusage rusage;
         int status;
-
+        
         int pid2;
         while((pid2=wait4(-1,&status,WNOHANG,&rusage)>0)){
             //cout << "reaped childID=" <<pid2 <<endl;
@@ -124,7 +124,7 @@ int main(int argc, char **argv){
                 fprintf (stderr, "Pipe failed.\n");
                 return EXIT_FAILURE;
             }
-
+            
             
             int pidDL;
             if((pidDL=fork())==0){
@@ -172,7 +172,7 @@ int main(int argc, char **argv){
 int processClient(){
     vector<string> empty;
     string messageReceived=messageFromDL(fromDL[0]); // receive login FIRST
-        
+    
     // Break up login message
     string cmd="";
     vector<string> arguments;
@@ -199,8 +199,8 @@ int processClient(){
             vector<string> arguments;
             parseMessage(line.c_str(), cmd, arguments);
             
-           // logout
-           if(atoi(cmd.c_str()) == MSG_LOGOUT){
+            // logout
+            if(atoi(cmd.c_str()) == MSG_LOGOUT){
                 activeUser="";
                 break;
             }
@@ -223,10 +223,10 @@ int processClient(){
             else if(atoi(cmd.c_str()) == MSG_GET){
                 get(cmd,arguments);
             }
-
+            
             // remove
             else if(atoi(cmd.c_str()) == MSG_REMOVE){
-                    removeFile(arguments);
+                removeFile(arguments);
             }
             // grant
             else if(atoi(cmd.c_str()) == MSG_GRANT){
@@ -234,7 +234,7 @@ int processClient(){
             }
             // revoke
             else if(atoi(cmd.c_str()) == MSG_REVOKE){
-                 revoke(arguments);
+                revoke(arguments);
             }
             else{
                 cout << "Invalid command from " << activeUser <<endl;
@@ -248,7 +248,7 @@ int processClient(){
         sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
         string waitForResponse=messageFromDL(fromDL[0]);
         return 1;
-    }    
+    }
     return 0;
 }
 
@@ -285,7 +285,7 @@ int serverSetup(){
 		perror("Bind failed");
 		exit(1);
 	}
-     
+    
 	if(listen(sock, 5) == -1){
 		perror("Listen failed");
 		exit(1);
@@ -411,7 +411,7 @@ string list(vector<string> arguments,string dir)
             arguments[1].insert(0,".");
             while ( (dp = readdir( dirp )) != 0 ){
                 struct stat file;
-                stat( dp->d_name, &file);    
+                stat( dp->d_name, &file);
                 if(strstr(dp->d_name,arguments[1].c_str()) >  0){
                     listoffiles += dp->d_name;
                     listoffiles += "\n";
@@ -432,13 +432,13 @@ string list(vector<string> arguments,string dir)
     return listoffiles;
 }
 
-int put(string cmd, vector<string> arguments){    
+int put(string cmd, vector<string> arguments){
     vector<string> empty;
     bool receive = true; //receive the file
     string filename=activeUser+"/"+arguments[0];
     string originalFilename=arguments[0];
     string fName;
-
+    
     if(access(filename.c_str(), F_OK) != -1){ //file exists?
         //file exists
         if(is_shared(filename)){
@@ -450,8 +450,8 @@ int put(string cmd, vector<string> arguments){
             current=next;
             next=originalFilename.find_first_of(delimiters,current);
             fName=originalFilename.substr(current,next-current);
-
-
+            
+            
             
             string temp=owner+"/"+fName;
             
@@ -469,7 +469,7 @@ int put(string cmd, vector<string> arguments){
                 return 0;
             }
         }
-        else{            
+        else{
             sendMessage(MSG_OVERWRITE,empty,toDL[1], fromDL[0], signalFromDL[0]);
             string confirmationMsg = messageFromDL(fromDL[0]);
             parseMessage(confirmationMsg.c_str(), cmd, arguments);
@@ -480,7 +480,7 @@ int put(string cmd, vector<string> arguments){
             sem_wait(&ptr->mutex);
             removeAccess((char*)activeUser.c_str(),(char*)fName.c_str(), (char*)filename.c_str());
             sem_post(&ptr->mutex);
-
+            
         }
     }
     else{
@@ -499,7 +499,7 @@ int put(string cmd, vector<string> arguments){
         else
             cout << "File received successfully\n";
     }
-
+    
     return retVal;
 }
 
@@ -517,7 +517,7 @@ int get(string cmd, vector<string> arguments){
             size_t next =-1;
             next=originalFilename.find_first_of(delimiters,current);
             string owner=originalFilename.substr(current,next-current);
-
+            
             sem_wait(&ptr->mutex);
             // ORIGINAL FILE NAME IS WRONG!!!
             if(readAccess((char*)originalFilename.c_str(), (char*)filename.c_str())!=write_access){
@@ -571,18 +571,18 @@ int grant(vector<string>arguments){
     
     if(getUserHash(userReceivingFile)==""){
         // user doesn't exist
-        sendMessage(MSG_USER_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        sendMessage(MSG_USER_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
         return 0;
     }
     else if(access(filename.c_str(), F_OK) == -1){
         // file doesn't exist
-        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
         return 0;
-
-    }  
-
+        
+    }
+    
     string command="cd " + userReceivingFile + " && ln -s ../" + filename + " shared:" +activeUser + ":" + originalFile;
-
+    
     //cout << "command=" << command <<endl;
     string ret=exec((char*)command.c_str());
     addInSharedDB(originalFile, userReceivingFile);
@@ -605,12 +605,12 @@ int revoke(vector<string>arguments){
     
     if(getUserHash(userReceivingFile)==""){
         // user doesn't exist
-        sendMessage(MSG_USER_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        sendMessage(MSG_USER_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
         return 0;
     }
     else if(access(fileToRemove.c_str(), F_OK) == -1){
         // file doesn't exist
-        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
+        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
         return 0;
         
     }
@@ -644,40 +644,39 @@ int removeFile(vector<string> arguments){
             return 1;
         }
         else{ // file is shared, try to remove
-            
-        }
-        sem_wait(&ptr->mutex);
-        // ORIGINAL FILE NAME CORRECT?
-        if(readAccess((char*)activeUser.c_str(), (char *)filename.c_str())==no_access){
-            writeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)filename.c_str(),write_access);
-            sem_post(&ptr->mutex);
-            
-            // remove all softlinks
-            vector<string> userList=returnUserList(filename);
-            for(int i=0; i<userList.size();i++){
-                string toRemove=userList[i] + "/" + "shared:" + activeUser + ":" + originalFilename;
-                remove(toRemove.c_str());
-            }
-            removeSharedfiles(originalFilename);
-  
-            // delete file
-            remove(filename.c_str());
-            
-            // grab lock
             sem_wait(&ptr->mutex);
-            // remove access
-            removeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)filename.c_str());
-            //release lock
-            sem_post(&ptr->mutex);
-            
-            
-            // upload new file
-            sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
-        }
-        else{ // means someone is accessing it
-            sem_post(&ptr->mutex);
-            sendMessage(MSG_IN_USE,empty,toDL[1], fromDL[0], signalFromDL[0]);
-            return 0;
+            // ORIGINAL FILE NAME CORRECT?
+            if(readAccess((char*)activeUser.c_str(), (char *)filename.c_str())==no_access){
+                writeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)filename.c_str(),write_access);
+                sem_post(&ptr->mutex);
+                
+                // remove all softlinks
+                vector<string> userList=returnUserList(filename);
+                for(int i=0; i<userList.size();i++){
+                    string toRemove=userList[i] + "/" + "shared:" + activeUser + ":" + originalFilename;
+                    remove(toRemove.c_str());
+                }
+                removeSharedfiles(originalFilename);
+                
+                // delete file
+                remove(filename.c_str());
+                
+                // grab lock
+                sem_wait(&ptr->mutex);
+                // remove access
+                removeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)filename.c_str());
+                //release lock
+                sem_post(&ptr->mutex);
+                
+                
+                // upload new file
+                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
+            }
+            else{ // means someone is accessing it
+                sem_post(&ptr->mutex);
+                sendMessage(MSG_IN_USE,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                return 0;
+            }
         }
     }
     else{
@@ -880,7 +879,7 @@ vector<string> returnUserList(string fname)
     }
     
     fin.close();
-    return userList;	
+    return userList;
 }
 
 bool is_shared(string fname)
@@ -892,7 +891,7 @@ bool is_shared(string fname)
     vector<string> userList;
     
     if(!fin.is_open()){
-        cout << "failed to open file" <<endl;
+        //cout << "failed to open file" <<endl;
         return false;
     }
     while(!fin.eof())
@@ -901,7 +900,7 @@ bool is_shared(string fname)
         if(strcmp(sfile_record.filename,fname.c_str()) == 0)
         {
             fin.close();
-            return true;            
+            return true;
         }
     }
     
@@ -922,7 +921,8 @@ void removeSharedfiles(string fileName){
     fin.open(filename.c_str());
     
     if(!fin.is_open()){
-        cout << "Failed to open file\n";
+        //cout << "Failed to open file\n";
+        return;
     }
     while(!fin.eof()){
         fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(shared_file));
@@ -937,7 +937,7 @@ void removeSharedfiles(string fileName){
     fout.open(filename.c_str());
     
     if(!fout.is_open()){
-        cout << "Failed to open file\n";
+        //cout << "Failed to open file\n";
     }
     
     
@@ -960,7 +960,8 @@ void removeAfterRevoke(string user , string revokedfile)
     fin.open(filename.c_str());
     
     if(!fin.is_open()){
-        cout << "Failed to open file\n";
+        //cout << "Failed to open file\n";
+        return;
     }
     while(!fin.eof()){
         
@@ -976,7 +977,8 @@ void removeAfterRevoke(string user , string revokedfile)
     fout.open(filename.c_str());
     
     if(!fout.is_open()){
-        cout << "Failed to open file\n";
+        //cout << "Failed to open file\n";
+        return;
     }
     
     
