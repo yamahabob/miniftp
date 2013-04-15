@@ -25,6 +25,7 @@ int add_eventEntry(eventEntry* head, seq_nr seqNum, int timestamp ,eventEntry** 
 int remove_byTime(eventEntry* head, eventEntry** newHead, int curTime);
 
 int remove_bySeq(eventEntry* head, eventEntry** newHead, seq_nr seqNum);
+void printQueue(eventEntry* head);
 
 
 #endif /* defined(__MINIFTP__event_queue__) */

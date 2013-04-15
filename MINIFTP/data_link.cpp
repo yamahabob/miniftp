@@ -165,14 +165,18 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                 }
                 break;
             case timeout: /* trouble; retransmit all outstanding frames */
+                cout << "Start of timeout\n";
+                printQueue(queueHead);
                 next_frame_to_send = ack_expected; /* start retransmitting here */
                 for (i = 1; i <= nbuffered; i++) {
-                    cout << "retransmitting index " << next_frame_to_send <<endl;
+                    //cout << "retransmitting index " << next_frame_to_send <<endl;
                     numReTrans++;
                     remove_bySeq(queueHead, &queueHead, queueHead->seqNum);
                     send_data(next_frame_to_send, buffer, sock);/* resend frame */
                     inc(next_frame_to_send); /* prepare to send the next one */
                 }
+                cout << "End of timeout\n";
+                printQueue(queueHead);
                 break;
             case dl_die:
                 log(type);

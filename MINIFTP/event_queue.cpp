@@ -133,7 +133,19 @@ int remove_bySeq(eventEntry* head, eventEntry** newHead, seq_nr seqNum){
 }
 
 
-
+void printQueue(eventEntry* head){
+    if(head == NULL){ //if the list is empty
+        cout << "Queue is empty\n";
+    }
+    else{ //the list is not empty
+        eventEntry* ptr = head;
+        while(ptr != NULL){ //traverse the list
+            cout << "QUEUE: " << ptr->seqNum << " ";
+            ptr=ptr->next;
+        }
+        cout << endl;
+    }
+}
 
 
 
