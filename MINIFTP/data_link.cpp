@@ -207,7 +207,6 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
     printQueue(queueHead);
 
     if(queueHead!=NULL){
-
         if((FRAME_TIMEOUT-(curTime-queueHead->timestamp))<1){
             //remove_byTime(queueHead, &queueHead, curTime);
             *event=timeout;
@@ -216,15 +215,13 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
         else{
             timeToWait->tv_sec=FRAME_TIMEOUT-(curTime-queueHead->timestamp);
         }
-        
-        if(timeToWait->tv_sec<=0){
-            free(timeToWait);
-            timeToWait=NULL;
-            *event=timeout;
-            return;
-        }
     }
-        
+    
+    if(timeToWait->tv_sec<=0){
+        free(timeToWait);
+        timeToWait=NULL;
+    }
+    
     cout << "End of waitforevent\n";
     printQueue(queueHead);
     
