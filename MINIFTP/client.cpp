@@ -80,6 +80,7 @@ void checkCommandLine(int argc, char **argv){
     if(argc==1)
         serverAddress="127.0.0.1";
     else if(argc>1){
+        serverAddress="127.0.0.1";
         if(strcmp(argv[1],"-a")==0 && argc>=3){
             serverAddress=string(argv[2]);
             if(argc>=5 && strcmp(argv[3],"-e")==0){
@@ -88,6 +89,9 @@ void checkCommandLine(int argc, char **argv){
         }
         else if(strcmp(argv[1],"-e")==0 && argc>=3){
             errorRate=atoi(argv[2]);
+            if(argc>=5 && strcmp(argv[3],"-a")==0){
+                serverAddress=string(argv[4]);
+            }
         }
         else{
             fprintf(stderr,"Usage: ./client -a [serverAddress] -e [error]\n");
