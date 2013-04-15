@@ -611,6 +611,9 @@ int revoke(vector<string>arguments){
     }
     else if(access(fileToRemove.c_str(), F_OK) == -1){
         // file doesn't exist
+        if(is_shared(originalFile)){
+            removeAfterRevoke(userReceivingFile, originalFile);
+        }
         sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
         return 0;
         
