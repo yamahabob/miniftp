@@ -537,10 +537,10 @@ int get(string cmd, vector<string> arguments){
             size_t current=0;
             size_t next =-1;
             next=originalFilename.find_first_of(delimiters,current);
-            current=next;
+            current=next+1;
             next=originalFilename.find_first_of(delimiters,current);
             string owner=originalFilename.substr(current,next-current);
-            current=next;
+            current=next+1;
             next=originalFilename.find_first_of(delimiters,current);
             string fname=originalFilename.substr(current,next-current);
 
