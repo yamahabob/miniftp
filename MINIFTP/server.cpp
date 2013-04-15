@@ -585,6 +585,7 @@ int grant(vector<string>arguments){
     
     //cout << "command=" << command <<endl;
     string ret=exec((char*)command.c_str());
+    cout << "original file for addInSharedDB=" << originalFile <<endl;
     addInSharedDB(originalFile, userReceivingFile);
     //cout << "ret=" << ret <<endl;
     
@@ -811,7 +812,7 @@ void addInSharedDB(string fname, string uname )
 		
 		fout.open(file.c_str(),ios::app);
 		if(!fout.is_open()){
-			cout << "failed to open file" << file <<endl;
+			cout << "failed to open file-->" << file <<endl;
 			return;
 		}
 		
@@ -828,21 +829,21 @@ void addInSharedDB(string fname, string uname )
 }
 
 /*check the file is already shared with same user*/
-bool isduplicate( string fname, string uname )
+bool isduplicate(string fname, string uname )
 {
     ifstream fin;
-	string f = activeUser+"/"+"sharedFileList.db";
+	string f = activeUser+"/sharedFileList.db";
     
     fin.open(f.c_str(),ios::in);
     struct shared_file sfile_record;
-    if(access(fname.c_str(), F_OK) == -1)
+    if(access(f.c_str(), F_OK) == -1)
     {
 		return false;
     }
     
     
     if(!fin.is_open()){
-        cout << "(isdup)failed to open file " <<endl;
+        cout << "(isdup)failed to open file " << f<<endl;
     }else
     {
         while(!fin.eof())
