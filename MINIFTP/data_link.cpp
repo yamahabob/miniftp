@@ -203,7 +203,11 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
     timeToWait->tv_sec=0;
     timeToWait->tv_usec=0;
     int curTime=(int)time(NULL);
+    cout << "Start of waitforevent\n";
+    printQueue(queueHead);
+
     if(queueHead!=NULL){
+
         if((FRAME_TIMEOUT-(curTime-queueHead->timestamp))<0){
             remove_byTime(queueHead, &queueHead, curTime);
             *event=timeout;
@@ -218,6 +222,8 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
         free(timeToWait);
         timeToWait=NULL;
     }
+    cout << "End of waitforevent\n";
+    printQueue(queueHead);
     
     int maxVal=max(toDL[0], sock);
     maxVal=max(maxVal,killDL[0]);
