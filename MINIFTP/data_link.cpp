@@ -105,7 +105,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
             case frame_arrival: /* a data or control frame has arrived */
                 from_physical_layer(&r,sock); /* get incoming frame from physical layer */
                 if(!checksumFrame(r)){
-                    cout << "ERROR: Checksum for type " << r.kind << endl;
+                    //cout << "ERROR: Checksum for type " << r.kind << endl;
                     numFrameErr++;
                     break;
                 }
@@ -165,8 +165,8 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                 }
                 break;
             case timeout: /* trouble; retransmit all outstanding frames */
-                cout << "Start of timeout\n";
-                printQueue(queueHead);
+                //cout << "Start of timeout\n";
+                //printQueue(queueHead);
                 next_frame_to_send = ack_expected; /* start retransmitting here */
                 for (i = 1; i <= nbuffered; i++) {
                     //cout << "retransmitting index " << next_frame_to_send <<endl;
@@ -175,8 +175,8 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
                     send_data(next_frame_to_send, buffer, sock);/* resend frame */
                     inc(next_frame_to_send); /* prepare to send the next one */
                 }
-                cout << "End of timeout\n";
-                printQueue(queueHead);
+                //cout << "End of timeout\n";
+                //printQueue(queueHead);
                 break;
             case dl_die:
                 log(type);
@@ -203,8 +203,8 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
     timeToWait->tv_sec=0;
     timeToWait->tv_usec=0;
     int curTime=(int)time(NULL);
-    cout << "Start of waitforevent\n";
-    printQueue(queueHead);
+    //cout << "Start of waitforevent\n";
+    //printQueue(queueHead);
 
     if(queueHead!=NULL){
 
@@ -222,8 +222,8 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
         free(timeToWait);
         timeToWait=NULL;
     }
-    cout << "End of waitforevent\n";
-    printQueue(queueHead);
+    //cout << "End of waitforevent\n";
+    //printQueue(queueHead);
     
     int maxVal=max(toDL[0], sock);
     maxVal=max(maxVal,killDL[0]);
