@@ -418,8 +418,9 @@ void returnSharedfileList(string  & listOfFiles)
         cout << "Failed to open file\n";
     }
     while(!fin.eof()){
-        
         fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(shared_file));
+        if(fin.gcount()<1)
+            return;
         //temp = sfile_record.filename + "\t" + sfile_record.sharedUser + "\n";
         listOfFiles +=sfile_record.filename;
         listOfFiles += "\t";
