@@ -44,7 +44,9 @@ static void send_data(seq_nr frame_nr, frame buffer[], int sock){
     s.ack=1337; // just to initialize it
 
     char result[CHECK_SUM_LENGTH];
-    checksum(s.info, PAYLOAD_SIZE, result);
+    char temp[FRAME_SIZE];
+    memcpy(temp, &s, FRAME_SIZE);
+    checksum(temp, result);
     memcpy(s.checkSum,result,2);
     to_physical_layer(&s,sock); /* transmit the frame */
     start_timer(frame_nr); /* start the timer running */
@@ -105,7 +107,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
             case frame_arrival: /* a data or control frame has arrived */
                 from_physical_layer(&r,sock); /* get incoming frame from physical layer */
                 if(!checksumFrame(r)){
-                    //cout << "ERROR: Checksum for type " << r.kind << endl;
+                    cout << "ERROR: Checksum for type " << r.kind << endl;
                     numFrameErr++;
                     break;
                 }
@@ -203,8 +205,8 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
     timeToWait->tv_sec=0;
     timeToWait->tv_usec=0;
     int curTime=(int)time(NULL);
-    cout << "Start of waitforevent\n";
-    printQueue(queueHead);
+    //cout << "Start of waitforevent\n";
+    //printQueue(queueHead);
 
     if(queueHead!=NULL){
 
@@ -224,9 +226,20 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
             return;
         }
     }
+<<<<<<< HEAD
         
     cout << "End of waitforevent\n";
     printQueue(queueHead);
+=======
+    
+    if(timeToWait->tv_sec<=0){
+        free(timeToWait);
+        timeToWait=NULL;
+    }
+    
+    //cout << "End of waitforevent\n";
+    //printQueue(queueHead);
+>>>>>>> 2dc33c665e5e034bd664107ece1d4e175bc2271f
     
     int maxVal=max(toDL[0], sock);
     maxVal=max(maxVal,killDL[0]);
@@ -397,19 +410,14 @@ void deStuff(vector <frame> partialPackets, packet *p){
  *input*. The function returns 1 on success. If the size of input is less
  than 2, the checksum cannot be computed; thus, the function returns -1.
  */
-int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]){
-    if(size < 2){
-        result[0] = input[0];
-        result[1] = input[0];
-        return -1;
-    }
-    
+int checksum(char *input, char result[CHECK_SUM_LENGTH]){
     result[0] = input[0];
     result[1] = input[1];
     
-    for(int i = 2; i < size; i++){
+    for(int i = 2; i < FRAME_SIZE-2; i++){
         result[i%2] ^= input[i];
-    }    
+    }
+    
     return 1;
 }
 
@@ -443,7 +451,11 @@ void bzzzzzzzuppp(frame *f){
 
 int checksumFrame(frame f){
     char result[2];
-    checksum(f.info, PAYLOAD_SIZE, result);
+    char temp[FRAME_SIZE];
+    memcpy(temp,&f, FRAME_SIZE);
+    checksum(temp, result);
+    cout << "CHECKSUM CHECK" << result[0] << "==" << f.checkSum[0] << " && " << result[1] << "==" << f.checkSum[1] << endl;
+
     if(result[0]==f.checkSum[0] && result[1]==f.checkSum[1])
         return 1;
     else
@@ -485,8 +497,11 @@ void sendAck(frame *r, int sock){
     memcpy(&ackFrame, r,FRAME_SIZE);
     ackFrame.kind=ack;
     ackFrame.ack=ackFrame.seq;
+    
+    char temp[FRAME_SIZE];
+    memcpy(temp, &ackFrame, FRAME_SIZE);
     char result[CHECK_SUM_LENGTH];
-    checksum(ackFrame.info, PAYLOAD_SIZE, result);
+    checksum(temp, result);
     memcpy(ackFrame.checkSum,result,2);
     numAckSent++;
     to_physical_layer(&ackFrame, sock);
