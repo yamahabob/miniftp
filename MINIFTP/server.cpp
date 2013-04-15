@@ -644,18 +644,24 @@ int removeFile(vector<string> arguments){
             return 1;
         }
         else{ // file is shared, try to remove
+            cout << "grabbing mutex\n";
             sem_wait(&ptr->mutex);
+            cout << "got mutex\n";
             // ORIGINAL FILE NAME CORRECT?
             if(readAccess((char*)activeUser.c_str(), (char *)filename.c_str())==no_access){
                 writeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)filename.c_str(),write_access);
                 sem_post(&ptr->mutex);
+                cout << "mutex down\n";
+
                 
                 // remove all softlinks
                 vector<string> userList=returnUserList(filename);
                 for(int i=0; i<userList.size();i++){
                     string toRemove=userList[i] + "/" + "shared:" + activeUser + ":" + originalFilename;
+                    cout << "removing " << toRemove <<endl;
                     remove(toRemove.c_str());
                 }
+                cout << "removingShared files for " << originalFilename <<endl;
                 removeSharedfiles(originalFilename);
                 
                 // delete file
