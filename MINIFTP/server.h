@@ -51,6 +51,7 @@ vector<string> returnUserList(string fname);
 bool is_shared(string fname);
 void removeSharedfiles(string fileName);
 void removeAfterRevoke(string user , string revokedfile);
+string returnSharedfileList();
 
 
 

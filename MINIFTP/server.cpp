@@ -374,7 +374,7 @@ void listfiles(vector<string> arguments, string user)
     {
         command= "ls "+user;
         listOfFiles=exec((char*)command.c_str());
-        cout << "listoffiles for ls -->" << listOfFiles <<endl;
+        //cout << "listoffiles for ls -->" << listOfFiles <<endl;
     }
     else if(arguments[0].compare("-d") == 0)
     {
@@ -383,15 +383,16 @@ void listfiles(vector<string> arguments, string user)
     }
     else if(arguments[0].compare("-o") == 0)
     {
-        cout << "list -o";
         listOfFiles= list(arguments,user);
     }
     else if (arguments.size() == 2 || arguments[0].compare("-t") == 0)
     {
-        cout << "inside -t";
         listOfFiles= list(arguments,user);
     }
-    
+    else if (arguments[0].compare("-s") == 0)
+    {
+        listOfFiles= returnSharedfileList();
+    }
     
     fout.write(listOfFiles.c_str(),listOfFiles.size());
     fout.close();
@@ -400,6 +401,36 @@ void listfiles(vector<string> arguments, string user)
     sendData(MSG_PUT, filename, toDL[1], fromDL[0], signalFromDL[0]);
     system(removefile.c_str());
 }
+
+string returnSharedfileList()
+{
+	string filename = "./"+activeUser + "/sharedFileList.db";
+	
+    string sharedFiles;//record of all entries
+    string temp;
+    struct shared_file sfile_record; //temp
+    
+    //first, let's read all the records into a vector:
+    ifstream fin;
+    fin.open(filename.c_str());
+    
+    if(!fin.is_open()){
+        cout << "Failed to open file\n";
+    }
+    while(!fin.eof()){
+        
+        fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(shared_file));
+        //temp = sfile_record.filename + "\t" + sfile_record.sharedUser + "\n";
+        sharedFiles +=sfile_record.filename;
+        sharedFiles += "\t";
+        sharedFiles += sfile_record.sharedUser;
+        sharedFiles += "\n";
+        
+    }
+    fin.close();
+    return sharedFiles;
+}
+
 
 string list(vector<string> arguments,string dir)
 {
