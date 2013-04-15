@@ -167,6 +167,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
             case timeout: /* trouble; retransmit all outstanding frames */
                 next_frame_to_send = ack_expected; /* start retransmitting here */
                 for (i = 1; i <= nbuffered; i++) {
+                    cout << "retransmitting index " << next_frame_to_send <<endl;
                     numReTrans++;
                     remove_bySeq(queueHead, &queueHead, queueHead->seqNum);
                     send_data(next_frame_to_send, buffer, sock);/* resend frame */
