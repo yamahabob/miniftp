@@ -391,7 +391,7 @@ void listfiles(vector<string> arguments, string user)
     }
     else if (arguments[0].compare("-s") == 0)
     {
-        listOfFiles= returnSharedfileList();
+        returnSharedfileList(listOfFiles);
     }
     
     fout.write(listOfFiles.c_str(),listOfFiles.size());
@@ -402,11 +402,11 @@ void listfiles(vector<string> arguments, string user)
     system(removefile.c_str());
 }
 
-string returnSharedfileList()
+void returnSharedfileList(string  & listOfFiles)
 {
 	string filename = "./"+activeUser + "/sharedFileList.db";
 	
-    string sharedFiles;//record of all entries
+    listOfFiles="";//record of all entries
     string temp;
     struct shared_file sfile_record; //temp
     
@@ -421,14 +421,13 @@ string returnSharedfileList()
         
         fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(shared_file));
         //temp = sfile_record.filename + "\t" + sfile_record.sharedUser + "\n";
-        sharedFiles +=sfile_record.filename;
-        sharedFiles += "\t";
-        sharedFiles += sfile_record.sharedUser;
-        sharedFiles += "\n";
+        listOfFiles +=sfile_record.filename;
+        listOfFiles += "\t";
+        listOfFiles += sfile_record.sharedUser;
+        listOfFiles += "\n";
         
     }
     fin.close();
-    return sharedFiles;
 }
 
 
