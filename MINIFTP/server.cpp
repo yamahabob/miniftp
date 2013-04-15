@@ -19,7 +19,23 @@
 #include "data_link.h"
 #include "utilities.h"
 
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <semaphore.h>
+#include <sys/mman.h>
 
+struct shared {
+	sem_t mutex;
+	int count;
+	//FILE *master;
+} shared;
+
+/*----------------------------------------------------------*/
 // Both must be defined as extern in datalink.cpp
 // so it knows to look here when linking occurs
 int toDL[2];
@@ -28,11 +44,41 @@ int signalFromDL[2];
 int killDL[2];
 int errorRate=-1;
 string activeUser;
+struct shared *ptr;
 
 int main(int argc, char **argv){
     checkCommandLine(argc, argv);
     int sock=serverSetup();
     srand((int)time(NULL));
+    
+    /*8888888888*/
+    int fd;
+
+    
+    //shared.master=fopen("master.txt","a+");
+    //if(!shared.master)
+    //    printf("shit\n");
+    
+    
+    if( (fd = open("temp_holder", O_RDWR | O_CREAT, 0660)) == -1)
+        fprintf(stderr,"error opening file\n");
+    
+    write(fd, &shared, sizeof(struct shared));
+    ptr = (struct shared *) mmap( NULL, sizeof(struct shared), PROT_READ | PROT_WRITE,
+                                 MAP_SHARED, fd, 0);
+    close(fd);
+    
+    if( sem_init(&ptr->mutex, 1, 1) != 0 ){
+        fprintf(stderr,"sem_init error\n");
+        exit(-2);
+    }
+    
+    //sem_wait(&ptr->mutex);
+    // critical code here
+    //sem_post(&ptr->mutex);
+    
+    /*8888888888*/
+
     
     
 	printf("Now accepting connections\n");
@@ -175,60 +221,16 @@ int processClient(){
                  chflags nouchg test.c
                  echo y | rm test.c // has not return
                  */
-                bool receive = true; //receive the file
-                string filename=activeUser+"/"+arguments[0];
-                if(access(filename.c_str(), F_OK) != -1){ //file exists?
-                    //file exists
-                    sendMessage(MSG_OVERWRITE,empty,toDL[1], fromDL[0], signalFromDL[0]);
-                    string confirmationMsg = messageFromDL(fromDL[0]);
-                    parseMessage(confirmationMsg.c_str(), cmd, arguments);
-                    
-                    if(atoi(cmd.c_str()) == MSG_NO) //The user does not want to overwrite
-                        receive = false; //so don't receive the file
-                }
-                else{
-                    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
-                }
-                
-                if(receive){
-                    arguments[0]=filename;
-                    int retVal=receiveData(arguments,fromDL[0]);
-                    
-                    if(retVal==0)
-                        cout << "Failed to received file\n";
-                    else
-                        cout << "File received successfully\n";
-                }
+                put(cmd,arguments);
             }
             // get
             else if(atoi(cmd.c_str()) == MSG_GET){
-                string filename=activeUser+"/"+arguments[0];
-                arguments[0]=filename;
-                cout << "file to GET=" << filename <<endl;
-                if(access(filename.c_str(), F_OK) != -1){ //file exists?
-                    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
-                    int retVal=sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
-                    if(retVal==0)
-                        cout << "Failed to send file\n";
-                    else
-                        cout << "File sent successfully\n";
-                }
-                else{
-                    //tell the client that the file does not exist.
-                    sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
-                }
-                
+                get(cmd,arguments);
             }
+
             // remove
             else if(atoi(cmd.c_str()) == MSG_REMOVE){
-                if(access(arguments[0].c_str(), F_OK) != -1){ //file exists?
-                    remove(arguments[0].c_str());
-                    sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
-                }
-                else{
-                    //tell the client that the file does not exist.
-                    sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
-                }
+                    removeFile(arguments);
             }
             // grant
             else if(atoi(cmd.c_str()) == MSG_GRANT){
@@ -434,12 +436,140 @@ string list(vector<string> arguments,string dir)
     return listoffiles;
 }
 
+int put(string cmd, vector<string> arguments){    
+    vector<string> empty;
+    bool receive = true; //receive the file
+    string filename=activeUser+"/"+arguments[0];
+    string originalFilename=arguments[0];
+    string fName;
+
+    if(access(filename.c_str(), F_OK) != -1){ //file exists?
+        //file exists
+        if(is_shared(filename)){
+            string delimiters = ":";
+            size_t current=0;
+            size_t next =-1;
+            next=originalFilename.find_first_of(delimiters,current);
+            string owner=originalFilename.substr(current,next-current);
+            current=next;
+            next=originalFilename.find_first_of(delimiters,current);
+            fName=originalFilename.substr(current,next-current);
+
+
+            
+            string temp=owner+"/"+fName;
+            
+            sem_wait(&ptr->mutex);
+            // ORIGINAL FILE NAME CORRECT?
+            if(readAccess((char*)owner.c_str(), (char *)fName.c_str())==no_access){
+                writeAccess((char*)activeUser.c_str(),(char*)owner.c_str(), (char*)filename.c_str(),write_access);
+                sem_post(&ptr->mutex);
+                // upload new file
+                sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
+            }
+            else{ // means someone is accessing it
+                sem_post(&ptr->mutex);
+                sendMessage(MSG_IN_USE,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                return 0;
+            }
+        }
+        else{            
+            sendMessage(MSG_OVERWRITE,empty,toDL[1], fromDL[0], signalFromDL[0]);
+            string confirmationMsg = messageFromDL(fromDL[0]);
+            parseMessage(confirmationMsg.c_str(), cmd, arguments);
+        }
+        
+        if(atoi(cmd.c_str()) == MSG_NO){ //The user does not want to overwrite
+            receive = false; //so don't receive the file
+            sem_wait(&ptr->mutex);
+            removeAccess((char*)activeUser.c_str(),(char*)fName.c_str(), (char*)filename.c_str());
+            sem_post(&ptr->mutex);
+
+        }
+    }
+    else{
+        sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
+    }
+    
+    int retVal=0;
+    if(receive){
+        arguments[0]=filename;
+        retVal=receiveData(arguments,fromDL[0]);
+        sem_wait(&ptr->mutex);
+        removeAccess((char*)activeUser.c_str(),(char*)fName.c_str(), (char*)filename.c_str());
+        sem_post(&ptr->mutex);
+        if(retVal==0)
+            cout << "Failed to received file\n";
+        else
+            cout << "File received successfully\n";
+    }
+
+    return retVal;
+}
+
+int get(string cmd, vector<string> arguments){
+    vector<string> empty;
+    string filename=activeUser+"/"+arguments[0];
+    string originalFilename=arguments[0];
+    arguments[0]=filename;
+    cout << "file to GET=" << filename <<endl;
+    if(access(filename.c_str(), F_OK) != -1){ //file exists?
+        if(isLink(((char*)filename.c_str())) || is_shared(filename)){
+            // if the file is a softlink, add yourself to the list!
+            string delimiters = ":";
+            size_t current=0;
+            size_t next =-1;
+            next=originalFilename.find_first_of(delimiters,current);
+            string owner=originalFilename.substr(current,next-current);
+
+            sem_wait(&ptr->mutex);
+            // ORIGINAL FILE NAME IS WRONG!!!
+            if(readAccess((char*)originalFilename.c_str(), (char*)filename.c_str())!=write_access){
+                writeAccess((char*)activeUser.c_str(),(char*)owner.c_str(), (char*)filename.c_str(),read_access);
+                sem_post(&ptr->mutex);
+            }
+            else{
+                sem_post(&ptr->mutex);
+                sendMessage(MSG_IN_USE,empty,toDL[1], fromDL[0], signalFromDL[0]);
+                return 0;
+            }
+            
+            sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
+            int retVal=sendData(MSG_GET, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+            
+            sem_wait(&ptr->mutex);
+            removeAccess((char*)activeUser.c_str(),(char*)originalFilename.c_str(), (char*)filename.c_str());
+            sem_post(&ptr->mutex);
+            
+            if(retVal==0)
+                cout << "Failed to send file\n";
+            else
+                cout << "File sent successfully\n";
+            return retVal;
+        }
+        else{
+            sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
+            int retVal=sendData(MSG_PUT, arguments, toDL[1], fromDL[0], signalFromDL[0]);
+            if(retVal==0)
+                cout << "Failed to send file\n";
+            else
+                cout << "File sent successfully\n";
+            return retVal;
+        }
+    }
+    else{
+        //tell the client that the file does not exist.
+        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]);
+        return 0;
+    }
+}
+
+
 int grant(vector<string>arguments){
     
     string userReceivingFile=arguments[0];
     string originalFile=arguments[1];
     string filename=activeUser+"/"+arguments[1];
-    
     
     vector <string> empty;
     
@@ -453,13 +583,14 @@ int grant(vector<string>arguments){
         sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); 
         return 0;
 
-    }
-    
+    }  
 
     string command="cd " + userReceivingFile + " && ln -s ../" + filename + " shared:" +activeUser + ":" + originalFile;
-    cout << "command=" << command <<endl;
+
+    //cout << "command=" << command <<endl;
     string ret=exec((char*)command.c_str());
-    cout << "ret=" << ret <<endl;
+    addInSharedDB(originalFile, userReceivingFile);
+    //cout << "ret=" << ret <<endl;
     
     sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]);
     
@@ -472,7 +603,7 @@ int revoke(vector<string>arguments){
     string filename=activeUser+"/"+arguments[1];
     string originalFile=arguments[1];
     string fileToRemove=userReceivingFile + "/shared:" +activeUser + ":" + originalFile;
-    cout << "to remove="<< fileToRemove <<endl;
+    //cout << "to remove="<< fileToRemove <<endl;
     
     vector <string> empty;
     
@@ -489,15 +620,375 @@ int revoke(vector<string>arguments){
     }
     
     string command="rm " + fileToRemove;
-    cout << command << endl;
+    //cout << command << endl;
     string ret=exec((char*)command.c_str());
-    cout << "ret=" << ret <<endl;
+    //cout << "ret=" << ret <<endl;
     
     sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); // make sure client knows to get message
     
     return 1;
 }
-    
 
+int removeFile(vector<string> arguments){
+    vector<string> empty;
+    string filename=activeUser+"/"+arguments[0];
+    string originalFilename=arguments[0];
+    string fName;
+    
+    if(access(filename.c_str(), F_OK) != -1){ //file exists?
+        string delimiters = ":";
+        size_t current=0;
+        size_t next =-1;
+        next=originalFilename.find_first_of(delimiters,current);
+        
+        //file exists
+        if(isLink((char*)filename.c_str()) || !(is_shared(filename.c_str()))){
+            remove(filename.c_str());
+            sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
+            return 1;
+        }
+        else{ // file is shared, try to remove
+            
+        }
+        sem_wait(&ptr->mutex);
+        // ORIGINAL FILE NAME CORRECT?
+        if(readAccess((char*)activeUser.c_str(), (char *)filename.c_str())==no_access){
+            writeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)filename.c_str(),write_access);
+            sem_post(&ptr->mutex);
+            
+            // remove all softlinks
+            vector<string> userList=returnUserList(filename);
+            for(int i=0; i<userList.size();i++){
+                string toRemove=userList[i] + "/" + "shared:" + activeUser + ":" + originalFilename;
+                remove(toRemove.c_str());
+            }
+            removeSharedfiles(originalFilename);
+  
+            // delete file
+            remove(filename.c_str());
+            
+            // grab lock
+            sem_wait(&ptr->mutex);
+            // remove access
+            removeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)filename.c_str());
+            //release lock
+            sem_post(&ptr->mutex);
+            
+            
+            // upload new file
+            sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
+        }
+        else{ // means someone is accessing it
+            sem_post(&ptr->mutex);
+            sendMessage(MSG_IN_USE,empty,toDL[1], fromDL[0], signalFromDL[0]);
+            return 0;
+        }
+    }
+    else{
+        sendMessage(MSG_NO_EXIST,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
+        return 0;
+    }
+    return 1;
+}
+
+
+bool isLink(char *filename){
+    struct stat p_statbuf;
+    
+    if (lstat(filename, &p_statbuf) < 0) {  //error in function
+        perror("calling stat()");
+        exit(1);  /* end progam here */
+    }
+    
+    if (S_ISLNK(p_statbuf.st_mode) == 1)
+        return true;
+    else
+        return false;
+}
+
+
+//Writes an access record in access.tmp according to the given parameters
+int writeAccess(char * user, char *owner, char *fileName, access_types type){
+    access_record record;
+    strcpy(record.user, user);
+    strcpy(record.fileName, fileName);
+    strcpy(record.owner, owner);
+    record.type = type;
+    
+    ofstream fout;
+    fout.open("access.tmp", fstream::app);
+    if(!fout.is_open()){
+        cout << "Failed to open file\n";
+        return 0;
+    }
+    fout.write(reinterpret_cast<char*>(&record), sizeof(access_record));
+    fout.close();
+    
+    return 1;
+}
+
+//Reads the access type of a file from access.tmp
+access_types readAccess(char *owner, char *fileName){
+    access_types retVal = no_access;
+    
+    if(access("access.tmp", F_OK) != -1){ //access type exists
+        access_record record;
+        ifstream fin;
+        fin.open("access.tmp");
+        
+        if(!fin.is_open()){
+            cout << "Failed to open file\n";
+            retVal = no_access;
+        }
+        
+        while(!fin.eof()){
+            fin.read(reinterpret_cast<char*>(&record), sizeof(access_record));
+            
+            //check if the record exists in the access file:
+            if(strcmp(record.fileName, fileName) == 0 && strcmp(record.owner, owner) == 0){
+                //record was found; reading the access type:
+                retVal = record.type;
+                break;
+            }
+        }
+        
+        fin.close();
+    }
+    
+    return retVal;
+}
+
+//Removes access information from access.tmp
+int removeAccess(char *user, char *owner, char *fileName){
+    if(access("access.tmp", F_OK) != -1){ //access type exists
+        vector<access_record> vec; //record of all entries
+        access_record record; //temp
+        
+        //first, let's read all the records into a vector:
+        ifstream fin;
+        fin.open("access.tmp");
+        
+        if(!fin.is_open()){
+            cout << "Failed to open file\n";
+        }
+        while(!fin.eof()){
+            fin.read(reinterpret_cast<char*>(&record), sizeof(access_record));
+            
+            if(strcmp(record.fileName, fileName) != 0 ||
+               strcmp(record.owner, owner) != 0 ||
+               strcmp(record.user, user)){ //not the target record; keep the record
+                vec.push_back(record);
+            }
+        }
+        fin.close();
+        
+        //now, we re-write the file
+        ofstream fout;
+        fout.open("access.tmp");
+        
+        if(!fout.is_open()){
+            cout << "Failed to open file\n";
+        }
+        
+        for(int i = 0; i < vec.size(); i++){
+            fout.write(reinterpret_cast<char*>(&vec[i]), sizeof(access_record));
+        }
+        fout.close();
+        
+        return 1;
+    }
+    return 0;
+}
+
+void addInSharedDB(string fname, string uname )
+{
+	string file = activeUser+"/"+"sharedFileList.db";
+	if ( !isduplicate (fname,uname))
+	{
+        ofstream fout;
+		struct shared_file sfile_record;
+		
+		fout.open(file.c_str(),fstream::app);
+		if(!fout.is_open()){
+			cout << "failed to open file" <<endl;
+			return;
+		}
+		
+		strcpy(sfile_record.filename,fname.c_str());
+		strcpy(sfile_record.sharedUser, uname.c_str());
+        
+		fout.write(reinterpret_cast<char*>(&sfile_record), sizeof(sfile_record));
+        
+		fout.close();
+	}
+	else
+		cout << "already shared"<<endl;
+    
+}
+
+/*check the file is already shared with same user*/
+bool isduplicate( string fname, string uname )
+{
+    ifstream fin;
+	string f = activeUser+"/"+"sharedFileList.db";
+    
+    fin.open(f.c_str(),ios::in);
+    struct shared_file sfile_record;
+    if(access(fname.c_str(), F_OK) == -1)
+    {
+		return false;
+    }
+    
+    
+    if(!fin.is_open()){
+        cout << "failed to open file" <<endl;
+    }else
+    {
+        while(!fin.eof())
+        {
+            fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(sfile_record));
+            if(strcmp(sfile_record.filename,fname.c_str()) == 0 && strcmp(sfile_record.sharedUser,uname.c_str()) == 0)
+            {
+                cout <<fname.c_str() <<endl ;
+                cout <<uname.c_str() <<endl ;
+                return true;
+                
+            }
+        }
+    }
+    return false;
+}
+
+vector<string> returnUserList(string fname)
+{
+    ifstream fin;
+	string f = activeUser+"/"+"sharedFileList.db";
+    fin.open(f.c_str(),ios::in);
+    struct shared_file sfile_record;
+    vector<string> userList;
+    
+    if(!fin.is_open()){
+        cout << "failed to open file" <<endl;
+        return userList;
+    }
+    while(!fin.eof())
+    {
+        fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(sfile_record));
+        if(strcmp(sfile_record.filename,fname.c_str()) == 0)
+        {
+            userList.push_back(string(sfile_record.sharedUser));
+            cout << sfile_record.filename << " = " << fname << endl;
+            cout << sfile_record.sharedUser << endl;
+            
+        }
+    }
+    
+    fin.close();
+    return userList;	
+}
+
+bool is_shared(string fname)
+{
+    ifstream fin;
+	string f = activeUser+"/"+"sharedFileList.db";
+    fin.open(f.c_str(),ios::in);
+    struct shared_file sfile_record;
+    vector<string> userList;
+    
+    if(!fin.is_open()){
+        cout << "failed to open file" <<endl;
+        return false;
+    }
+    while(!fin.eof())
+    {
+        fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(sfile_record));
+        if(strcmp(sfile_record.filename,fname.c_str()) == 0)
+        {
+            fin.close();
+            return true;            
+        }
+    }
+    
+    fin.close();
+    return false;
+}
+
+
+/*remove all file entries from sharedFile.db when file is being deleted form directory*/
+void removeSharedfiles(string fileName){
+	string filename = activeUser + "/sharedFileList.db";
+	string removeCommand = "rm "+filename;
+    vector<shared_file> newRecord; //record of all entries
+    struct shared_file sfile_record; //temp
+    
+    //first, let's read all the records into a vector:
+    ifstream fin;
+    fin.open(filename.c_str());
+    
+    if(!fin.is_open()){
+        cout << "Failed to open file\n";
+    }
+    while(!fin.eof()){
+        fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(shared_file));
+        
+        if(strcmp(sfile_record.filename, fileName.c_str()) != 0 ){ //not the target record; keep the record
+            newRecord.push_back(sfile_record);
+        }
+    }
+    fin.close();
+    //now, we re-write the file
+    ofstream fout;
+    fout.open(filename.c_str());
+    
+    if(!fout.is_open()){
+        cout << "Failed to open file\n";
+    }
+    
+    
+    for(int i = 0; i < newRecord.size(); i++){
+        fout.write(reinterpret_cast<char*>(&newRecord[i]), sizeof(shared_file));
+    }
+    fout.close();
+    
+}
+
+void removeAfterRevoke(string user , string revokedfile)
+{
+	string filename = activeUser + "/sharedFileList.db";
+	string removeCommand = "rm "+filename;
+    vector<shared_file> newRecord; //record of all entries
+    struct shared_file sfile_record; //temp
+    
+    //first, let's read all the records into a vector:
+    ifstream fin;
+    fin.open(filename.c_str());
+    
+    if(!fin.is_open()){
+        cout << "Failed to open file\n";
+    }
+    while(!fin.eof()){
+        
+        fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(shared_file));
+        
+        if(strcmp(sfile_record.filename, revokedfile.c_str()) != 0 || strcmp(sfile_record.sharedUser,user.c_str()) != 0){ //not the target record; keep the record
+            newRecord.push_back(sfile_record);
+        }
+    }
+    fin.close();
+    //now, we re-write the file
+    ofstream fout;
+    fout.open(filename.c_str());
+    
+    if(!fout.is_open()){
+        cout << "Failed to open file\n";
+    }
+    
+    
+    for(int i = 0; i < newRecord.size(); i++){
+        fout.write(reinterpret_cast<char*>(&newRecord[i]), sizeof(shared_file));
+    }
+    fout.close();
+    
+}
 
 
