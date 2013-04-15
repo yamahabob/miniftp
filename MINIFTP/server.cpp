@@ -13,22 +13,17 @@
 #include <errno.h>
 #include <openssl/sha.h>
 #include <sstream>
+
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/time.h>
 #include <semaphore.h>
+#include <sys/mman.h>
 
 #include "header.h"
 #include "server.h"
 #include "data_link.h"
 #include "utilities.h"
-
-#include <sys/types.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <semaphore.h>
-#include <sys/mman.h>
 
 struct shared {
 	sem_t mutex;
