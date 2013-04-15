@@ -400,7 +400,7 @@ int checksum(char *input, char result[CHECK_SUM_LENGTH]){
     result[0] = input[0];
     result[1] = input[1];
     
-    for(int i = 2; i < FRAME_SIZE; i++){
+    for(int i = 2; i < FRAME_SIZE-2; i++){
         result[i%2] ^= input[i];
     }
     
@@ -440,6 +440,8 @@ int checksumFrame(frame f){
     char temp[FRAME_SIZE];
     memcpy(temp,&f, FRAME_SIZE);
     checksum(temp, result);
+    cout << "CHECKSUM CHECK" << result[0] << "==" << f.checkSum[0] << " && " << result[1] << "==" << f.checkSum[1] << endl;
+
     if(result[0]==f.checkSum[0] && result[1]==f.checkSum[1])
         return 1;
     else

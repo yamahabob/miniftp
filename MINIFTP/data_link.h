@@ -22,8 +22,8 @@ typedef struct{
     seq_nr seq;
     seq_nr ack;
     char info[PAYLOAD_SIZE];
-    char checkSum[2];
     int remaining;
+    char checkSum[2];
 } frame;
 
 extern int toDL[2];
