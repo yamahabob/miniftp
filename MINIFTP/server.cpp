@@ -863,13 +863,13 @@ bool isduplicate( string fname, string uname )
 vector<string> returnUserList(string fname)
 {
     ifstream fin;
-	string f = activeUser+"/"+"sharedFileList.db";
+	string f = activeUser+"/sharedFileList.db";
     fin.open(f.c_str(),ios::in);
     struct shared_file sfile_record;
     vector<string> userList;
     
     if(!fin.is_open()){
-        cout << "failed to open file" <<endl;
+        cout << "failed to open file " << f <<endl;
         return userList;
     }
     while(!fin.eof())
