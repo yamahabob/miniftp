@@ -643,7 +643,7 @@ int removeFile(vector<string> arguments){
         next=originalFilename.find_first_of(delimiters,current);
         
         //file exists
-        if(isLink((char*)filename.c_str()) || !(is_shared(filename.c_str()))){
+        if(isLink((char*)filename.c_str()) || !(is_shared(originalFilename.c_str()))){
             remove(filename.c_str());
             sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
             return 1;
@@ -679,8 +679,6 @@ int removeFile(vector<string> arguments){
                 //release lock
                 sem_post(&ptr->mutex);
                 
-                
-                // upload new file
                 sendMessage(MSG_OK,empty,toDL[1], fromDL[0], signalFromDL[0]); //tell the client it is ok to send the file
             }
             else{ // means someone is accessing it
