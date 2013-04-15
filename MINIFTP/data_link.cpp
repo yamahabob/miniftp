@@ -44,7 +44,9 @@ static void send_data(seq_nr frame_nr, frame buffer[], int sock){
     s.ack=1337; // just to initialize it
 
     char result[CHECK_SUM_LENGTH];
-    checksum(s.info, PAYLOAD_SIZE, result);
+    char temp[FRAME_SIZE];
+    memcpy(temp, &s, FRAME_SIZE);
+    checksum(temp, result);
     memcpy(s.checkSum,result,2);
     to_physical_layer(&s,sock); /* transmit the frame */
     start_timer(frame_nr); /* start the timer running */
@@ -203,8 +205,8 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
     timeToWait->tv_sec=0;
     timeToWait->tv_usec=0;
     int curTime=(int)time(NULL);
-    cout << "Start of waitforevent\n";
-    printQueue(queueHead);
+    //cout << "Start of waitforevent\n";
+    //printQueue(queueHead);
 
     if(queueHead!=NULL){
         if((FRAME_TIMEOUT-(curTime-queueHead->timestamp))<1){
@@ -222,8 +224,8 @@ void wait_for_event(event_type *event, int sock){ // dl_die!!
         timeToWait=NULL;
     }
     
-    cout << "End of waitforevent\n";
-    printQueue(queueHead);
+    //cout << "End of waitforevent\n";
+    //printQueue(queueHead);
     
     int maxVal=max(toDL[0], sock);
     maxVal=max(maxVal,killDL[0]);
@@ -394,19 +396,14 @@ void deStuff(vector <frame> partialPackets, packet *p){
  *input*. The function returns 1 on success. If the size of input is less
  than 2, the checksum cannot be computed; thus, the function returns -1.
  */
-int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]){
-    if(size < 2){
-        result[0] = input[0];
-        result[1] = input[0];
-        return -1;
-    }
-    
+int checksum(char *input, char result[CHECK_SUM_LENGTH]){
     result[0] = input[0];
     result[1] = input[1];
     
-    for(int i = 2; i < size; i++){
+    for(int i = 2; i < FRAME_SIZE; i++){
         result[i%2] ^= input[i];
-    }    
+    }
+    
     return 1;
 }
 
@@ -440,7 +437,9 @@ void bzzzzzzzuppp(frame *f){
 
 int checksumFrame(frame f){
     char result[2];
-    checksum(f.info, PAYLOAD_SIZE, result);
+    char temp[FRAME_SIZE];
+    memcpy(temp,&f, FRAME_SIZE);
+    checksum(temp, result);
     if(result[0]==f.checkSum[0] && result[1]==f.checkSum[1])
         return 1;
     else
@@ -482,8 +481,11 @@ void sendAck(frame *r, int sock){
     memcpy(&ackFrame, r,FRAME_SIZE);
     ackFrame.kind=ack;
     ackFrame.ack=ackFrame.seq;
+    
+    char temp[FRAME_SIZE];
+    memcpy(temp, &ackFrame, FRAME_SIZE);
     char result[CHECK_SUM_LENGTH];
-    checksum(ackFrame.info, PAYLOAD_SIZE, result);
+    checksum(temp, result);
     memcpy(ackFrame.checkSum,result,2);
     numAckSent++;
     to_physical_layer(&ackFrame, sock);
