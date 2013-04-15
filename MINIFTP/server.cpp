@@ -27,8 +27,6 @@
 
 struct shared {
 	sem_t mutex;
-	int count;
-	//FILE *master;
 } shared;
 
 /*----------------------------------------------------------*/
@@ -49,14 +47,7 @@ int main(int argc, char **argv){
     string access="access.tmp";
     remove(access.c_str());
     
-    /*8888888888*/
     int fd;
-    
-    
-    //shared.master=fopen("master.txt","a+");
-    //if(!shared.master)
-    //    printf("shit\n");
-    
     
     if( (fd = open("temp_holder", O_RDWR | O_CREAT, 0660)) == -1)
         fprintf(stderr,"error opening file\n");
@@ -70,13 +61,6 @@ int main(int argc, char **argv){
         fprintf(stderr,"sem_init error\n");
         exit(-2);
     }
-    
-    //sem_wait(&ptr->mutex);
-    // critical code here
-    //sem_post(&ptr->mutex);
-    
-    /*8888888888*/
-    
     
     
 	printf("Now accepting connections\n");
@@ -94,7 +78,7 @@ int main(int argc, char **argv){
         
         int pid2;
         while((pid2=wait4(-1,&status,WNOHANG,&rusage)>0)){
-            //cout << "reaped childID=" <<pid2 <<endl;
+            cout << "Child ID =" <<pid2 << " collected" <<endl;
         }
         
 		client_sock = accept(sock, (struct sockaddr *)&client, &sin_size);
@@ -529,7 +513,6 @@ int get(string cmd, vector<string> arguments){
     string filename=activeUser+"/"+arguments[0];
     string originalFilename=arguments[0];
     arguments[0]=filename;
-    cout << "file to GET=" << filename <<endl;
     if(access(filename.c_str(), F_OK) != -1){ //file exists?
         if(isLink(((char*)filename.c_str())) || is_shared(filename)){
             // if the file is a softlink, add yourself to the list!
@@ -547,10 +530,7 @@ int get(string cmd, vector<string> arguments){
             
             sem_wait(&ptr->mutex);
             if(readAccess((char*)owner.c_str(), (char*)fname.c_str())!=write_access){
-                cout << "Adding read access to file\n";
                 writeAccess((char*)activeUser.c_str(),(char*)owner.c_str(), (char*)fname.c_str(),read_access);
-                cout << "owner=" << owner << " and filename=" << fname <<endl;
-                cout << "immedately after adding, the status is =" << readAccess((char*)owner.c_str(), (char *)fname.c_str()) <<endl;
                 sem_post(&ptr->mutex);
             }
             else{
@@ -563,7 +543,6 @@ int get(string cmd, vector<string> arguments){
             int retVal=sendData(MSG_GET, arguments, toDL[1], fromDL[0], signalFromDL[0]);
             
             sem_wait(&ptr->mutex);
-            cout << "Removing read access to file\n";
             removeAccess((char*)activeUser.c_str(),(char*)owner.c_str(), (char*)fname.c_str());
             sem_post(&ptr->mutex);
             
@@ -650,7 +629,6 @@ int revoke(vector<string>arguments){
     }
     
     string command="rm " + fileToRemove;
-    //cout << command << endl;
     string ret=exec((char*)command.c_str());
     
     removeAfterRevoke(userReceivingFile, originalFile);
@@ -674,25 +652,19 @@ int removeFile(vector<string> arguments){
             return 1;
         }
         else{ // file is shared, try to remove
-            cout << "grabbing mutex\n";
             sem_wait(&ptr->mutex);
-            cout << "got mutex\n";
             // ORIGINAL FILE NAME CORRECT?
             if(readAccess((char*)activeUser.c_str(), (char *)originalFilename.c_str())==no_access){
-                cout << "readAccess for " << filename << "=" << readAccess((char*)activeUser.c_str(), (char *)originalFilename.c_str()) <<endl;
                 writeAccess((char*)activeUser.c_str(),(char*)activeUser.c_str(), (char*)originalFilename.c_str(),write_access);
                 sem_post(&ptr->mutex);
-                cout << "mutex down\n";
 
                 
                 // remove all softlinks
                 vector<string> userList=returnUserList(filename);
                 for(int i=0; i<userList.size();i++){
                     string toRemove=userList[i] + "/" + "shared:" + activeUser + ":" + originalFilename;
-                    cout << "removing " << toRemove <<endl;
                     remove(toRemove.c_str());
                 }
-                cout << "removingShared files for " << originalFilename <<endl;
                 removeSharedfiles(originalFilename);
                 
                 // delete file
@@ -852,7 +824,7 @@ void addInSharedDB(string fname, string uname )
 		fout.close();
 	}
 	else
-		cout << "already shared"<<endl;
+		cout << "File already shared"<<endl;
     
 }
 
@@ -879,8 +851,8 @@ bool isduplicate(string fname, string uname )
             fin.read(reinterpret_cast<char*>(&sfile_record), sizeof(sfile_record));
             if(strcmp(sfile_record.filename,fname.c_str()) == 0 && strcmp(sfile_record.sharedUser,uname.c_str()) == 0)
             {
-                cout <<fname.c_str() <<endl ;
-                cout <<uname.c_str() <<endl ;
+                //cout <<fname.c_str() <<endl ;
+                //cout <<uname.c_str() <<endl ;
                 return true;
                 
             }
@@ -898,7 +870,7 @@ vector<string> returnUserList(string fname)
     vector<string> userList;
     
     if(!fin.is_open()){
-        cout << "return userlist failed to open file -- " << f <<endl;
+        //cout << "return userlist failed to open file -- " << f <<endl;
         return userList;
     }
     while(!fin.eof())
@@ -907,8 +879,8 @@ vector<string> returnUserList(string fname)
         if(strcmp(sfile_record.filename,fname.c_str()) == 0)
         {
             userList.push_back(string(sfile_record.sharedUser));
-            cout << sfile_record.filename << " = " << fname << endl;
-            cout << sfile_record.sharedUser << endl;
+            //cout << sfile_record.filename << " = " << fname << endl;
+            //cout << sfile_record.sharedUser << endl;
             
         }
     }

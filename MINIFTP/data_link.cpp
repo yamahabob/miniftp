@@ -411,14 +411,18 @@ int fragment(char *stuffedPacket, frame rawFrames[MAX_FRAME_SPLIT], int size)
 void bzzzzzzzuppp(frame *f){
     int randNum=rand()%101;
     if(0<=randNum && randNum<=errorRate){
-    /*
         //cout << "GOT ZAPPED with number=" << randNum <<endl;
         if(f->kind==ack)
             cout << "ACK FRAME " << f->ack <<" ZAPPED with number=" << randNum <<endl;
         else if(f->kind==data)
             cout << "DATA FRAME " << f->seq <<" ZAPPED with number=" << randNum <<endl;
-     */
         f->checkSum[0]=!f->checkSum[1];
+    }
+    else{
+        if(f->kind==ack)
+            cout << "ACK FRAME " << f->ack <<" *NOT* ZAPPED with number=" << randNum <<endl;
+        else if(f->kind==data)
+            cout << "DATA FRAME " << f->seq <<" *NOT* ZAPPED with number=" << randNum <<endl;
     }
 }
 
