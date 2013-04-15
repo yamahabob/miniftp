@@ -2,7 +2,7 @@
 all: client server
 
 server: server.o data_link.o event_queue.o utilities.o
-	g++ server.o data_link.o event_queue.o utilities.o -o server
+	g++ server.o data_link.o event_queue.o utilities.o -o server -lpthread
 
 client: client.o data_link.o event_queue.o utilities.o
 	g++ client.o data_link.o event_queue.o utilities.o -o client
