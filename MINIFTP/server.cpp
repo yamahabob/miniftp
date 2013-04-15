@@ -237,7 +237,7 @@ int processClient(){
                 revoke(arguments);
             }
             else{
-                cout << "Invalid command from " << activeUser <<endl;
+                cout << "Invalid command " << cmd << " from " << activeUser <<endl;
                 sendMessage(MSG_ERROR,empty,toDL[1], fromDL[0], signalFromDL[0]); // not valid command
             }
         }
@@ -617,7 +617,7 @@ int grant(vector<string>arguments){
     
     //cout << "command=" << command <<endl;
     string ret=exec((char*)command.c_str());
-    cout << "original file for addInSharedDB=" << originalFile <<endl;
+    //cout << "original file for addInSharedDB=" << originalFile <<endl;
     addInSharedDB(originalFile, userReceivingFile);
     //cout << "ret=" << ret <<endl;
     

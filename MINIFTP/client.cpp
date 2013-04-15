@@ -336,12 +336,14 @@ int put(vector<string> arguments){
 }
 
 int get(vector<string> arguments){
+    /*
     ofstream fout;
     fout.open(arguments[0].c_str(),ios::out);
     if(!fout.is_open()){
         cout << "File " << arguments[0] << " failed to open" << endl;
         return 0;
     }
+     */
     
     sendMessage(MSG_GET, arguments, toDL[1], fromDL[0], signalFromDL[0]);
     string response=messageFromDL(fromDL[0]);
