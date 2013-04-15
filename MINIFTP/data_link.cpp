@@ -105,6 +105,7 @@ void protocol5(int type,int sock){ // removed network_fd because it's now global
             case frame_arrival: /* a data or control frame has arrived */
                 from_physical_layer(&r,sock); /* get incoming frame from physical layer */
                 if(!checksumFrame(r)){
+                    cout << "ERROR: Checksum for type " << r.kind << endl;
                     numFrameErr++;
                     break;
                 }
