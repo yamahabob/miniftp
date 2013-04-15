@@ -35,7 +35,7 @@ int main(int argc, char **argv){
         int pid=-1;
         if((pid=fork())==0){
 #ifdef DEBUG
-            cout << "Starting DL\n";
+            //cout << "Starting DL\n";
 #endif
             close(toDL[1]);
             close(fromDL[0]);
@@ -43,7 +43,7 @@ int main(int argc, char **argv){
             close(killDL[1]);
             protocol5(1,serverSock);
 #ifdef DEBUG
-            cout << "Closing DL\n";
+            //cout << "Closing DL\n";
 #endif
             exit(0);
         }
@@ -54,16 +54,16 @@ int main(int argc, char **argv){
             close(killDL[0]);
             //cout << "DATALINK PID=" << pid << endl;
             close(serverSock); // close communicating socket
-            while(exit_status!=1){
+            //while(exit_status!=1){
                 if(login()==1){
                     exit_status=processCommands(toDL[1]);// if just logout->exit=0, if logout_exit->exit=1
                     // collect?
                 }
-            }
+            //}
             // KILL DATA LINK HERE!
             char kill='1';
             write(killDL[1],&kill,1);
-            cout << "CLIENT APP ON CLIENT DEAD... KILLING DL\n";
+            //cout << "CLIENT APP ON CLIENT DEAD... KILLING DL\n";
             int status;
             waitpid(pid,&status,0); // right syntax?
         }
