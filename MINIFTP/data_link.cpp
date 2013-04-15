@@ -44,7 +44,7 @@ static void send_data(seq_nr frame_nr, frame buffer[], int sock){
 	s.ack=1337; // just to initialize it
 
 	char result[CHECK_SUM_LENGTH];
-	checksum(s.info, PAYLOAD_SIZE, result);
+	checksum(s.seq, s.kind, s.remaining, s.info, PAYLOAD_SIZE, result);
 	memcpy(s.checkSum,result,2);
 	to_physical_layer(&s,sock); /* transmit the frame */
 	start_timer(frame_nr); /* start the timer running */
@@ -394,15 +394,17 @@ void deStuff(vector <frame> partialPackets, packet *p){
  *input*. The function returns 1 on success. If the size of input is less
  than 2, the checksum cannot be computed; thus, the function returns -1.
  */
-int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]){
-	if(size < 2){
-		result[0] = input[0];
-		result[1] = input[0];
-		return -1;
-	}
-
+int checksum(int seq, int kind, int remaining, const char* input, int size, char result[CHECK_SUM_LENGTH]){
 	result[0] = input[0];
 	result[1] = input[1];
+    
+    //compute the checksum over fields of the frame
+	for(int i = 0; i < 4; i++){
+		result[i%2] ^= seq >> (i*8);
+		result[i%2] ^= kind >> (i*8);
+		result[i%2] ^= remaining >> (i*8);
+	}    
+    
 
 	for(int i = 2; i < size; i++){
 		result[i%2] ^= input[i];
@@ -440,7 +442,7 @@ void bzzzzzzzuppp(frame *f){
 
 int checksumFrame(frame f){
 	char result[2];
-	checksum(f.info, PAYLOAD_SIZE, result);
+	checksum(f.seq, f.kind, f.remaining, f.info, PAYLOAD_SIZE, result);
 	if(result[0]==f.checkSum[0] && result[1]==f.checkSum[1])
 		return 1;
 	else
@@ -483,7 +485,7 @@ void sendAck(frame *r, int sock){
 	ackFrame.kind=ack;
 	ackFrame.ack=ackFrame.seq;
 	char result[CHECK_SUM_LENGTH];
-	checksum(ackFrame.info, PAYLOAD_SIZE, result);
+	checksum(ackFrame.seq, ackFrame.kind, ackFrame.remaining, ackFrame.info, PAYLOAD_SIZE, result);
 	memcpy(ackFrame.checkSum,result,2);
 	numAckSent++;
 	to_physical_layer(&ackFrame, sock);

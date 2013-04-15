@@ -67,7 +67,7 @@ void protocol5(int type, int sock); //removed network_fd see .cpp file
 static bool between(seq_nr a, seq_nr b, seq_nr c);
 int byteStuff(char *input, char *output);
 void deStuff(vector <frame> partialPackets, packet *p);
-int checksum(const char* input, int size, char result[CHECK_SUM_LENGTH]);
+int checksum(int seq, int kind, int remaining, const char* input, int size, char result[CHECK_SUM_LENGTH]);
 int makeFrame(packet packetData, frame framesArr[MAX_FRAME_SPLIT]);
 void bzzzzzzzuppp(frame *f);
 int checksumFrame(frame f);
